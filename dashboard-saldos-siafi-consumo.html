@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saldos SIAFI · Material de Consumo · GAP-GL</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { display:['"Open Sans"','system-ui','sans-serif'], serif:['"Roboto"','Georgia','serif'], mono:['"DM Mono"','"Roboto Mono"','ui-monospace','monospace'] },
+      colors: {
+        ink: { 50:'#f6f7f8',100:'#eef0f2',200:'#dde1e6',300:'#c0c6cd',400:'#9aa1ab',500:'#6c727b',600:'#4d535b',700:'#3a3f46',800:'#252a30',900:'#15181c',950:'#0a0c0f' },
+        accent: { DEFAULT:'#0c8a6f',50:'#ecfdf5',100:'#d1fae5',200:'#a7f3d0',300:'#6ee7b7',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857',800:'#065f46',900:'#064e3b' },
+        danger: { DEFAULT:'#dc2626',50:'#fef2f2',100:'#fee2e2',500:'#ef4444',600:'#dc2626',700:'#b91c1c' },
+        warning: { DEFAULT:'#d97706',50:'#fffbeb',100:'#fef3c7',500:'#f59e0b',600:'#d97706' },
+      },
+      boxShadow: {
+        'glass':'0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 32px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)',
+        'card':'0 1px 0 rgba(255,255,255,0.7) inset, 0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)',
+        'kpi':'0 1px 0 rgba(255,255,255,0.7) inset, 0 1px 2px rgba(15,23,42,0.06), 0 8px 24px rgba(15,23,42,0.05)'
+      }
+    } }
+  };
+</script>
+<style>
+  :root { --grain-opacity: 0.025; }
+  html, body { font-feature-settings: "tnum"; }
+  body {
+    font-family: 'Open Sans', sans-serif;
+    background-color: #f5f7f9;
+    color: #15181c;
+    background-image:
+      radial-gradient(at 18% 8%,  rgba(12, 138, 111, 0.08) 0px, transparent 45%),
+      radial-gradient(at 82% 12%, rgba(15, 23, 42, 0.04)   0px, transparent 50%),
+      radial-gradient(at 65% 92%, rgba(220, 38, 38, 0.04)  0px, transparent 45%),
+      radial-gradient(at 8%  90%, rgba(12, 138, 111, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+    opacity: var(--grain-opacity); pointer-events:none; z-index:1000; mix-blend-mode:multiply;
+  }
+  .glass { background:rgba(255,255,255,0.78); backdrop-filter:blur(14px) saturate(140%); -webkit-backdrop-filter:blur(14px) saturate(140%); border:1px solid rgba(255,255,255,0.7); }
+  .glass-dark { background:rgba(21,24,28,0.85); backdrop-filter:blur(20px) saturate(140%); -webkit-backdrop-filter:blur(20px) saturate(140%); border:1px solid rgba(255,255,255,0.06); }
+  .tnum, table td.num, .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(15,23,42,0.18); border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background:rgba(15,23,42,0.32); }
+  td.has-tip { position:relative; cursor:help; }
+  td.has-tip::after { content:''; position:absolute; right:6px; top:50%; width:4px; height:4px; border-radius:50%; background:rgba(12,138,111,0.45); transform:translateY(-50%); transition:opacity 0.15s; }
+  td.has-tip:hover::after { background:rgba(12,138,111,1); }
+  #cellTooltip { position:fixed; z-index:5000; padding:14px 16px; min-width:280px; max-width:360px; background:rgba(21,24,28,0.96); backdrop-filter:blur(12px); color:#f6f7f8; border-radius:10px; box-shadow:0 20px 50px rgba(15,23,42,0.35); font-size:12.5px; line-height:1.55; opacity:0; transform:translateY(6px) scale(0.97); transition:all 0.16s cubic-bezier(.2,.8,.2,1); pointer-events:none; border:1px solid rgba(255,255,255,0.06); }
+  #cellTooltip.show { opacity:1; transform:translateY(0) scale(1); }
+  #cellTooltip .ttitle { font-family:'Roboto',sans-serif; font-weight:700; font-size:14px; color:#6ee7b7; line-height:1; margin-bottom:4px; }
+  #cellTooltip .tsub { font-size:10.5px; color:#9aa1ab; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+  #cellTooltip .trow { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; gap:14px; font-family:'DM Mono',monospace; font-size:11.5px; }
+  #cellTooltip .trow .lbl { color:#c0c6cd; font-family:'Open Sans',sans-serif; font-size:11px; }
+  #cellTooltip .trow .val { font-weight:600; }
+  #cellTooltip .val.pos { color:#34d399; }
+  #cellTooltip .val.neg { color:#f87171; }
+  #cellTooltip .val.eq { color:#c0c6cd; }
+  #cellTooltip .tdiv { height:1px; background:rgba(255,255,255,0.08); margin:8px 0; }
+  #cellTooltip .tflag { font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; font-weight:700; color:#6ee7b7; margin-top:6px; }
+  #cellTooltip .tflag.warn { color:#fbbf24; }
+  .pill { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600; letter-spacing:0.3px; line-height:1.4; }
+  .pill-up { background:#fef2f2; color:#991b1b; }
+  .pill-down { background:#ecfdf5; color:#065f46; }
+  .pill-eq { background:#f5f7f9; color:#4d535b; }
+  .pill-crit { background:linear-gradient(135deg,#fef3c7,#fde68a); color:#78350f; border:1px solid #fbbf24; }
+  .trend-pat { font-family:'DM Mono',monospace; letter-spacing:2px; font-size:13px; padding:3px 8px; border-radius:999px; background:#f5f7f9; color:#9aa1ab; cursor:help; display:inline-block; font-weight:700; }
+  .trend-pat .up { color:#dc2626; }
+  .trend-pat .flat { color:#c0c6cd; }
+  .trend-pat.alert { background:#fef3c7; color:#92400e; }
+  .crit-rule-box { display:none; position:fixed; z-index:5500; background:rgba(21,24,28,0.96); backdrop-filter:blur(20px); color:#f6f7f8; padding:18px 20px; border-radius:14px; font-size:12.5px; line-height:1.6; box-shadow:0 20px 60px rgba(15,23,42,0.35); max-width:380px; border:1px solid rgba(255,255,255,0.08); border-left:3px solid #f59e0b; }
+  .crit-rule-box.show { display:block; animation:critIn 0.18s cubic-bezier(.2,.8,.2,1); }
+  @keyframes critIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .kpi-info { display:inline-block; margin-left:4px; width:14px; height:14px; line-height:14px; text-align:center; border-radius:50%; background:rgba(255,255,255,0.25); font-size:10px; cursor:help; font-weight:700; vertical-align:middle; }
+  .kpi-info:hover { background:rgba(255,255,255,0.45); }
+  .apexcharts-tooltip { border:none !important; border-radius:10px !important; box-shadow:0 12px 32px rgba(15,23,42,0.18) !important; background:rgba(21,24,28,0.96) !important; color:#fff !important; backdrop-filter:blur(12px); }
+  .apexcharts-tooltip-title { background:rgba(255,255,255,0.04) !important; border-bottom:1px solid rgba(255,255,255,0.08) !important; color:#6ee7b7 !important; font-family:'Roboto',sans-serif !important; font-weight:700; font-size:13px !important; padding:8px 12px !important; }
+  .apexcharts-text tspan { font-family:'Open Sans',sans-serif !important; }
+  .toast { position:fixed; bottom:28px; right:28px; padding:12px 18px; border-radius:10px; background:rgba(21,24,28,0.95); color:#fff; font-size:13px; backdrop-filter:blur(12px); box-shadow:0 12px 32px rgba(15,23,42,0.25); z-index:9999; transform:translateY(80px); opacity:0; transition:all 0.3s cubic-bezier(.2,.8,.2,1); border-left:3px solid #10b981; }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast.error { border-left-color:#ef4444; }
+  .reveal { opacity:0; transform:translateY(8px); animation:reveal 0.5s cubic-bezier(.2,.8,.2,1) forwards; }
+  @keyframes reveal { to { opacity:1; transform:translateY(0); } }
+  .reveal-1 { animation-delay:0.05s; } .reveal-2 { animation-delay:0.10s; } .reveal-3 { animation-delay:0.15s; }
+  .reveal-4 { animation-delay:0.20s; } .reveal-5 { animation-delay:0.25s; } .reveal-6 { animation-delay:0.30s; }
+  .nav-link { transition:all 0.15s ease; }
+  .nav-link:hover { background:rgba(255,255,255,0.05); color:#fff; }
+  .nav-link.active { background:linear-gradient(90deg,rgba(12,138,111,0.18),transparent); color:#6ee7b7; border-left-color:#10b981; }
+  .field { background:rgba(255,255,255,0.6); border:1px solid rgba(15,23,42,0.08); transition:all 0.15s; }
+  .field:focus { background:#fff; border-color:#10b981; box-shadow:0 0 0 3px rgba(16,185,129,0.12); outline:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:600; transition:all 0.15s ease; border:1px solid transparent; cursor:pointer; }
+  .btn-primary { background:#15181c; color:#fff; }
+  .btn-primary:hover { background:#0a0c0f; box-shadow:0 4px 12px rgba(15,23,42,0.15); }
+  .btn-ghost { background:rgba(255,255,255,0.7); color:#15181c; border-color:rgba(15,23,42,0.08); }
+  .btn-ghost:hover { background:#fff; border-color:rgba(15,23,42,0.15); }
+  .toggle-group { display:inline-flex; padding:3px; background:rgba(15,23,42,0.04); border-radius:8px; }
+  .toggle-group button { padding:5px 11px; font-size:11.5px; font-weight:600; color:#6c727b; border-radius:6px; transition:all 0.15s; }
+  .toggle-group button.active { background:#fff; color:#15181c; box-shadow:0 1px 2px rgba(15,23,42,0.06); }
+  .toggle-group button:hover:not(.active) { color:#15181c; }
+  /* Tabela hierárquica */
+  tr.parent-row { background:rgba(12,138,111,0.04); }
+  tr.parent-row:hover { background:rgba(12,138,111,0.08); }
+  tr.parent-row td { font-weight:600; }
+  tr.child-row { background:rgba(255,255,255,0.4); }
+  tr.child-row:hover { background:rgba(15,23,42,0.04); }
+  tr.child-row td:first-child { padding-left:42px !important; }
+  tr.child-row td.descricao { font-size:12px; color:#3a3f46; }
+  .toggle-arrow { display:inline-block; width:14px; height:14px; transition:transform 0.18s ease; cursor:pointer; user-select:none; color:#6c727b; }
+  .toggle-arrow.expanded { transform:rotate(90deg); }
+  .sb-tag { font-family:'DM Mono',monospace; font-size:10px; font-weight:700; background:#f3f4f6; color:#3a3f46; padding:2px 6px; border-radius:4px; margin-right:8px; letter-spacing:0.3px; }
+  /* Highlight para SB7 (Gêneros de Alimentação) */
+  tr.child-row.sb-rancho { border-left: 3px solid #d97706; background: rgba(217,119,6,0.04); }
+  tr.child-row.sb-rancho .sb-tag { background:#fef3c7; color:#92400e; }
+</style>
+</head>
+<body class="font-display antialiased">
+<div class="flex min-h-screen">
+
+  <!-- SIDEBAR -->
+  <aside class="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-30 glass-dark">
+    <div class="px-6 pt-7 pb-6 border-b border-white/5">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-accent-400 to-accent-700 flex items-center justify-center shadow-lg">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 7L9 18l-5-5"/></svg>
+        </div>
+        <div>
+          <div class="font-display font-bold text-white text-[15px] tracking-tight leading-none">GAP-GL</div>
+          <div class="font-mono text-[10px] text-ink-400 uppercase tracking-[0.18em] mt-1">Material de Consumo</div>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <div class="px-3 pt-2 pb-2 text-[10px] uppercase tracking-[0.2em] font-semibold text-ink-500">Navegação</div>
+      <a href="#kpis" class="nav-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium border-l-2 border-transparent text-ink-300">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> Visão Geral
+      </a>
+      <a href="#trend" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium border-l-2 border-transparent text-ink-300">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18l6-6 4 4L22 6M22 6h-6M22 6v6"/></svg> Tendência
+      </a>
+      <a href="#offenders" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium border-l-2 border-transparent text-ink-300">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h12M3 12h8M3 18h16"/></svg> Top Subitens
+      </a>
+      <a href="#table" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium border-l-2 border-transparent text-ink-300">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Tabela Hierárquica
+      </a>
+
+      <div class="px-3 pt-6 pb-2 text-[10px] uppercase tracking-[0.2em] font-semibold text-ink-500">Resumo</div>
+      <div class="px-3 space-y-3">
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-ink-400 mb-1">Saldo Total Abr</div>
+          <div class="text-white font-mono text-sm font-semibold" id="sb-abr">—</div>
+        </div>
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-ink-400 mb-1">Δ% vs Janeiro</div>
+          <div class="text-white font-mono text-sm font-semibold" id="sb-pct">—</div>
+        </div>
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-ink-400 mb-1">Subitens críticos</div>
+          <div class="font-mono text-[12px]" id="sb-crit-count">—</div>
+        </div>
+      </div>
+    </nav>
+    <div class="px-5 py-4 border-t border-white/5">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-accent-400 to-accent-700 text-white text-[11px] font-bold flex items-center justify-center">M</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-white text-[12px] font-medium truncate">Material de Consumo</div>
+          <div class="text-ink-400 text-[10.5px] font-mono truncate">FAB · GAP-GL</div>
+        </div>
+        <span id="lockStatus" class="pill pill-eq" style="background:rgba(220,38,38,0.15);color:#fca5a5;">🔒</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 lg:ml-64">
+    <header class="sticky top-0 z-20 glass border-b border-ink-200/50">
+      <div class="flex items-center justify-between px-8 h-16">
+        <div class="flex items-center gap-4 flex-1 max-w-xl">
+          <div class="relative flex-1">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input id="globalSearch" type="text" placeholder="Buscar por subitem, conta ou descrição..." class="field w-full pl-10 pr-4 py-2 rounded-lg text-[13px] text-ink-900 placeholder-ink-400">
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnLock" class="btn btn-ghost">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Admin
+          </button>
+          <button id="btnImport" class="btn btn-ghost hidden" style="background:#1abc9c;color:#fff;border-color:#1abc9c;">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Importar
+          </button>
+          <button id="btnRestore" class="btn btn-ghost hidden">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5"/></svg> Restaurar
+          </button>
+          <button id="btnCopy" class="btn btn-ghost">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar
+          </button>
+          <button id="btnExport" class="btn btn-primary">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Exportar
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-8 space-y-6">
+      <!-- HERO -->
+      <section class="reveal reveal-1">
+        <div class="flex items-end justify-between flex-wrap gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="font-mono text-[10.5px] uppercase tracking-[0.22em] text-ink-500">ACI · Saldos SIAFI · 2026</span>
+              <span class="w-1 h-1 rounded-full bg-ink-300"></span>
+              <span class="font-mono text-[10.5px] text-accent-700 font-semibold">JAN — ABR</span>
+            </div>
+            <h1 class="font-display font-bold text-[32px] leading-tight tracking-tight text-ink-950">
+              Material de <span class="font-semibold text-accent-700">Consumo</span>
+              <span class="font-mono text-[16px] text-ink-500">· por Subitem</span>
+            </h1>
+            <p class="text-ink-500 text-[13.5px] max-w-2xl mt-1.5">
+              Análise dos saldos SIAFI das 7 contas contábeis de Material de Consumo, com visão hierárquica conta → subitem (SB).
+              A conta INTERNO (1.1.5.6.1.01.00) inclui detalhamento de 47 subitens, entre eles SB 7 (Gêneros de Alimentação) e SB 21 (Material de Copa e Cozinha).
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="dataSourceBadge" class="hidden pill" style="background:#1abc9c;color:#fff;">📁 Dados Importados</span>
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-[10.5px] text-ink-500 uppercase tracking-wider">Atualização</span>
+              <span class="font-mono text-[12px] text-ink-800 font-semibold" id="genStamp">—</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPIs -->
+      <section id="kpis" class="grid grid-cols-12 gap-6 reveal reveal-2">
+        <div class="col-span-12 md:col-span-6 xl:col-span-3 rounded-2xl p-5 shadow-kpi relative overflow-hidden text-white" style="background:linear-gradient(135deg,#1abc9c,#16a085);">
+          <div class="absolute -right-6 -bottom-6 text-white/15 select-none pointer-events-none" style="font-size:110px;line-height:1;font-weight:700;">∑</div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/80 font-semibold">Saldo Total Abril</span>
+              <div class="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M5 9h14M5 15h14"/></svg>
+              </div>
+            </div>
+            <div class="font-mono text-[28px] font-semibold tracking-tight tnum text-white" id="kpi-total">—</div>
+            <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-white/20">
+              <span class="text-[11px] text-white/85" id="kpi-total-sub">vs Janeiro</span>
+              <span id="kpi-total-pill" class="pill" style="background:rgba(255,255,255,0.18);color:#fff;">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-12 md:col-span-6 xl:col-span-3 rounded-2xl p-5 shadow-kpi relative overflow-hidden text-white" style="background:linear-gradient(135deg,#3498db,#2980b9);">
+          <div class="absolute -right-6 -bottom-6 text-white/15 select-none pointer-events-none" style="font-size:110px;line-height:1;font-weight:700;">#1</div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/80 font-semibold">Maior Subitem</span>
+              <div class="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+                <span class="text-white font-bold text-[11px]">SB</span>
+              </div>
+            </div>
+            <div class="font-mono text-[22px] font-semibold tracking-tight tnum text-white leading-none mb-1" id="kpi-top">—</div>
+            <div class="text-[10.5px] text-white/85 font-mono uppercase tracking-wider truncate" id="kpi-top-conta">—</div>
+            <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-white/20">
+              <span class="text-[11px] text-white/85" id="kpi-top-pct">— do total</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-12 md:col-span-6 xl:col-span-3 rounded-2xl p-5 shadow-kpi relative overflow-hidden text-white" style="background:linear-gradient(135deg,#e74c3c,#c0392b);">
+          <div class="absolute -right-6 -bottom-6 text-white/15 select-none pointer-events-none" style="font-size:110px;line-height:1;font-weight:700;">▲</div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/80 font-semibold">Maior Crescimento</span>
+              <div class="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+              </div>
+            </div>
+            <div class="font-mono text-[22px] font-semibold tracking-tight tnum text-white leading-none mb-1" id="kpi-grow">—</div>
+            <div class="text-[10.5px] text-white/85 font-mono uppercase tracking-wider truncate" id="kpi-grow-name">—</div>
+            <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-white/20">
+              <span class="text-[11px] text-white/85">Δ% vs Jan</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-12 md:col-span-6 xl:col-span-3 rounded-2xl p-5 shadow-kpi relative overflow-hidden cursor-help text-white" id="kpi-criticas-card" style="background:linear-gradient(135deg,#f39c12,#d97706);">
+          <div class="absolute -right-6 -bottom-6 text-white/15 select-none pointer-events-none" style="font-size:110px;line-height:1;font-weight:700;">⚠</div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/80 font-semibold flex items-center gap-1">
+                Subitens Críticos
+                <span id="kpi-criticas-info" class="kpi-info">?</span>
+              </span>
+              <div class="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+            </div>
+            <div class="font-mono text-[28px] font-semibold tracking-tight tnum text-white" id="kpi-criticas">—</div>
+            <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-white/20">
+              <span class="text-[11px] text-white/85">tendência ↑ + &gt;10%</span>
+              <span class="pill" style="background:rgba(255,255,255,0.18);color:#fff;">⚠ Crítico</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tendência + Donut -->
+      <section class="grid grid-cols-12 gap-6 reveal reveal-3">
+        <div id="trend" class="col-span-12 xl:col-span-8 glass rounded-2xl p-6 shadow-card">
+          <div class="flex items-start justify-between mb-1">
+            <div>
+              <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-accent-700 font-semibold mb-1">01 · Série Temporal</div>
+              <h3 class="font-display font-semibold text-[17px] text-ink-950 tracking-tight">Evolução do <span class="font-semibold text-accent-700">Saldo Total</span></h3>
+              <p class="text-[12px] text-ink-500 mt-0.5">Saldo SIAFI consolidado · Jan a Abr / 2026</p>
+            </div>
+          </div>
+          <div id="chartTrend" class="mt-4"></div>
+        </div>
+
+        <div class="col-span-12 xl:col-span-4 glass rounded-2xl p-6 shadow-card">
+          <div class="mb-1">
+            <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-accent-700 font-semibold mb-1">02 · Composição</div>
+            <h3 class="font-display font-semibold text-[17px] text-ink-950 tracking-tight">Distribuição por <span class="font-semibold text-accent-700">Conta</span></h3>
+            <p class="text-[12px] text-ink-500 mt-0.5">Peso de cada conta-pai · Abril</p>
+          </div>
+          <div id="chartDonut" class="mt-2"></div>
+        </div>
+      </section>
+
+      <!-- Top Subitens -->
+      <section id="offenders" class="reveal reveal-4">
+        <div class="glass rounded-2xl p-6 shadow-card">
+          <div class="mb-1">
+            <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-accent-700 font-semibold mb-1">03 · Ranking</div>
+            <h3 class="font-display font-semibold text-[17px] text-ink-950 tracking-tight">Top 10 <span class="font-semibold text-accent-700">Subitens</span> por Saldo</h3>
+            <p class="text-[12px] text-ink-500 mt-0.5">Subitens (SB) com maiores saldos SIAFI em Abril</p>
+          </div>
+          <div id="chartOffenders" class="mt-4"></div>
+        </div>
+      </section>
+
+      <!-- TABELA HIERÁRQUICA -->
+      <section id="table" class="reveal reveal-5">
+        <div class="glass rounded-2xl shadow-card overflow-hidden">
+          <div class="p-6 pb-4 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-accent-700 font-semibold mb-1">04 · Tabela Hierárquica</div>
+              <h3 class="font-display font-semibold text-[17px] text-ink-950 tracking-tight">Contas e seus <span class="font-semibold text-accent-700">Subitens</span></h3>
+              <p class="text-[12px] text-ink-500 mt-0.5">Clique nas linhas-pai (▶) para expandir os subitens · passe o mouse nos saldos para comparar com mês anterior</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btnExpandAll" class="btn btn-ghost text-[11.5px]">Expandir tudo</button>
+              <button id="btnCollapseAll" class="btn btn-ghost text-[11.5px]">Recolher tudo</button>
+            </div>
+          </div>
+          <div class="px-6 pb-3 flex items-center justify-between gap-4 flex-wrap">
+            <input id="tableSearch" type="text" placeholder="🔍 Filtrar por subitem ou conta..." class="field px-3 py-2 rounded-lg text-[12.5px] w-72">
+            <div class="text-[11px] text-ink-500 flex items-center gap-1.5 flex-wrap">
+              <span>Status:</span>
+              <span class="pill pill-up">↑ Cresceu</span>
+              <span class="pill pill-down">↓ Reduziu</span>
+              <span class="pill pill-eq">≈ Estável</span>
+              <span id="legendCrit" class="pill pill-crit cursor-help">⚠ Crítico</span>
+            </div>
+          </div>
+          <div class="overflow-x-auto border-t border-ink-200/50">
+            <table class="w-full text-[12.5px]">
+              <thead class="bg-ink-50/60">
+                <tr>
+                  <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wider text-ink-600" style="width:340px">Conta / Subitem</th>
+                  <th class="text-right px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wider text-ink-600">Jan</th>
+                  <th class="text-right px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wider text-ink-600">Fev</th>
+                  <th class="text-right px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wider text-ink-600">Mar</th>
+                  <th class="text-right px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wider text-ink-600">Abr</th>
+                  <th class="text-center px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wider text-ink-600" title="Aumentos consecutivos: ▲ subiu / · não subiu">Tend.</th>
+                  <th class="text-right px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wider text-ink-600">Δ% Jan</th>
+                  <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wider text-ink-600">Status</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+          <div id="emptyState" class="hidden p-8 text-center text-ink-500 text-[13px]">
+            Nenhum resultado encontrado.
+          </div>
+        </div>
+      </section>
+
+      <footer class="text-center text-[11px] text-ink-400 pt-4 pb-2">
+        <span class="font-mono uppercase tracking-[0.2em]">GAP-GL</span> · Grupamento de Apoio do Galeão · ACI / Comissão de Contabilidade
+      </footer>
+    </div>
+  </main>
+</div>
+
+<!-- Modal PIN -->
+<div id="modalLock" class="fixed inset-0 z-[6000] hidden items-center justify-center bg-ink-950/40 backdrop-blur-sm">
+  <div class="glass rounded-2xl shadow-2xl w-[90%] max-w-sm overflow-hidden">
+    <div class="p-5 border-b border-ink-200/50 flex items-center justify-between">
+      <div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-accent-700 font-semibold">Acesso restrito</div>
+        <h4 class="font-display font-semibold text-[15px] text-ink-950 mt-0.5">Modo Administrador</h4>
+      </div>
+      <button id="modalClose" class="text-ink-400 hover:text-ink-900 text-xl leading-none">×</button>
+    </div>
+    <div class="p-5">
+      <label class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold">PIN de 4 dígitos</label>
+      <input id="pinInput" type="password" maxlength="6" class="field w-full mt-2 px-3 py-3 rounded-lg font-mono text-center text-lg tracking-[0.3em]" placeholder="••••" autocomplete="off">
+      <div id="pinError" class="text-[12px] text-danger-600 mt-2 min-h-[16px]"></div>
+    </div>
+    <div class="p-4 bg-ink-50/60 flex items-center justify-end gap-2">
+      <button id="modalCancel" class="btn btn-ghost">Cancelar</button>
+      <button id="modalConfirm" class="btn btn-primary">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Import -->
+<div id="modalImport" class="fixed inset-0 z-[6000] hidden items-center justify-center bg-ink-950/40 backdrop-blur-sm">
+  <div class="glass rounded-2xl shadow-2xl w-[90%] max-w-lg overflow-hidden">
+    <div class="p-5 border-b border-ink-200/50 flex items-center justify-between">
+      <div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-accent-700 font-semibold">Atualização automática</div>
+        <h4 class="font-display font-semibold text-[15px] text-ink-950 mt-0.5">Importar Planilha SIAFI</h4>
+      </div>
+      <button id="importClose" class="text-ink-400 hover:text-ink-900 text-xl leading-none">×</button>
+    </div>
+    <div class="p-5">
+      <div id="dropZone" class="border-2 border-dashed border-ink-300 rounded-xl p-8 text-center cursor-pointer transition-all hover:border-accent-500 hover:bg-accent-50/50">
+        <svg class="w-12 h-12 mx-auto text-ink-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        <div class="font-display font-semibold text-ink-900 text-[14px]">Arraste a planilha aqui</div>
+        <div class="text-[11.5px] text-ink-500 mt-1">ou <span class="text-accent-700 font-semibold underline">clique para selecionar</span></div>
+        <div class="text-[10.5px] text-ink-400 mt-3 font-mono">.xlsx, .xls, .csv</div>
+      </div>
+      <input type="file" id="fileInput" class="hidden" accept=".xlsx,.xls,.csv">
+      <div id="importStatus" class="mt-4 hidden">
+        <div class="rounded-lg border border-ink-200 bg-white/70 p-3">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="font-mono text-[12px] text-ink-900 font-semibold" id="importFileName">arquivo.xlsx</span>
+            <span id="importFileSize" class="text-[11px] text-ink-500 ml-auto"></span>
+          </div>
+          <div id="importPreview" class="text-[11.5px] text-ink-700 font-mono"></div>
+        </div>
+      </div>
+      <div id="importError" class="mt-3 text-[12px] text-danger-600 hidden p-3 bg-danger-50 rounded-lg border border-danger-200"></div>
+      <div class="mt-4 p-3 bg-ink-50/60 rounded-lg text-[11.5px] text-ink-600 leading-relaxed">
+        <div class="font-semibold text-ink-900 mb-1.5">📋 Estrutura esperada:</div>
+        <ul class="list-disc pl-4 space-y-0.5">
+          <li>Linha 3: Conta Contábil · Conta Corrente · meses (JAN/2026, FEV/2026, ...)</li>
+          <li>Coluna A: código SIAFI (ex: 115610100)</li>
+          <li>Coluna C: Subitem (número, ex: 7, 21) ou "SEM INFORMACAO"</li>
+          <li>Demais colunas: saldos por mês</li>
+        </ul>
+      </div>
+    </div>
+    <div class="p-4 bg-ink-50/60 flex items-center justify-end gap-2">
+      <button id="importCancel" class="btn btn-ghost">Cancelar</button>
+      <button id="importApply" class="btn btn-primary" disabled style="opacity:0.5;cursor:not-allowed">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<div id="cellTooltip"></div>
+<div class="toast" id="toast"></div>
+
+<!-- Painel critério -->
+<div class="crit-rule-box" id="critRuleBox">
+  <div class="flex items-center gap-2 mb-3">
+    <span class="font-mono text-[9.5px] uppercase tracking-[0.22em] font-bold" style="color:#f59e0b">Critério</span>
+    <span class="font-display font-bold text-[15px]" style="color:#f59e0b">Subitem Crítico</span>
+  </div>
+  <p class="text-ink-200 text-[12.5px] leading-relaxed mb-3">
+    Um subitem (SB) é classificado como <b>crítico</b> quando atende <u>simultaneamente</u> os dois testes:
+  </p>
+  <div class="space-y-3">
+    <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+      <div class="text-accent-300 text-[10.5px] uppercase tracking-wider font-bold mb-1">1 · Tendência de alta</div>
+      <div class="text-ink-200 text-[12px] mb-1">Subiu em <b>≥ 2 dos 3</b> saltos mensais</div>
+      <div class="font-mono text-[10.5px] text-ink-300 bg-white/5 px-2 py-1 rounded">|Fev|&gt;|Jan|, |Mar|&gt;|Fev|, |Abr|&gt;|Mar|</div>
+    </div>
+    <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+      <div class="text-accent-300 text-[10.5px] uppercase tracking-wider font-bold mb-1">2 · Crescimento material</div>
+      <div class="font-mono text-[10.5px] text-ink-300 bg-white/5 px-2 py-1 rounded">(|Abr| − |Jan|) / |Jan| &gt; 10%</div>
+    </div>
+  </div>
+  <div class="border-t border-white/10 pt-3 mt-3 text-[11px] text-ink-400 italic">
+    Coluna <code class="font-mono not-italic text-accent-300">Tend.</code> mostra o padrão para auditoria visual:
+    <span class="font-mono text-danger-400">▲</span> = mês cresceu vs anterior;
+    <span class="font-mono">·</span> = não cresceu.
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DADOS
+   ============================================================ */
+const DADOS_B64 = "eyJsaW5oYXMiOiBbeyJjb250YSI6ICIxLjEuNS41LjEuMTAuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyBFTSBUUsOCTlNJVE8iLCAic2IiOiBudWxsLCAic2JfbGFiZWwiOiBudWxsLCAiamFuIjogMzAwNDI4NjUuMjksICJmZXYiOiAyNzU5MzE1Ny4yLCAibWFyIjogMjk1NTc5NjQuNjEsICJhYnIiOiAxODkzNzM5NC44N30sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMSwgInNiX2xhYmVsIjogIlNCIDEiLCAiamFuIjogMzczNTcyLjA1LCAiZmV2IjogMjA0OTM3Ljg2LCAibWFyIjogMTUxMTkyLjE1LCAiYWJyIjogMzY0NzQwLjc0fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAyLCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgZGUgQ296aW5oYSBlIExpbXBlemEiLCAiamFuIjogMjg3My4wNiwgImZldiI6IDI4NzMuMDYsICJtYXIiOiAyODczLjA2LCAiYWJyIjogMjg3My4wNn0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMywgInNiX2xhYmVsIjogIkNvbWJ1c3TDrXZlaXMgZSBMdWJyaWZpY2FudGVzIHBhcmEgQXZpYcOnw6NvIiwgImphbiI6IDM2ODAxMC44OCwgImZldiI6IDM2ODAxMC44OCwgIm1hciI6IDM2ODAxMC44OCwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogNCwgInNiX2xhYmVsIjogIkfDoXMgRW5nYXJyYWZhZG8iLCAiamFuIjogMC4wLCAiZmV2IjogMC4wLCAibWFyIjogMC4wLCAiYWJyIjogOTQuNH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogNSwgInNiX2xhYmVsIjogIkV4cGxvc2l2b3MgZSBNdW5pw6fDtWVzIiwgImphbiI6IDEzMjUxOC42NywgImZldiI6IDEzMjUxOC42NywgIm1hciI6IDAuMCwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogNiwgInNiX2xhYmVsIjogIkFsaW1lbnRvcyBwYXJhIEFuaW1haXMiLCAiamFuIjogMTUxNzUyLjIsICJmZXYiOiAxNTE3NTIuMiwgIm1hciI6IDE1MTc1Mi4yLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiA3LCAic2JfbGFiZWwiOiAiR8OqbmVyb3MgZGUgQWxpbWVudGHDp8OjbyIsICJqYW4iOiAxMDE5MDExLjkxLCAiZmV2IjogMjcxNDA2OS4zNiwgIm1hciI6IDE4MTAxMzcuNTQsICJhYnIiOiAzNDkzODYxLjc5fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiA5LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgRmFybWFjb2zDs2dpY28iLCAiamFuIjogNTY3NDkyMzEuOTcsICJmZXYiOiAzNDQ5Njg4NS44NywgIm1hciI6IDU2MzUyNTU2LjAzLCAiYWJyIjogMTk4NDcwMy4zNX0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMTAsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBPZG9udG9sw7NnaWNvIiwgImphbiI6IDE5NDQyLjE4LCAiZmV2IjogMTk0NDIuMTgsICJtYXIiOiAxOTQzNi41NCwgImFiciI6IDE5NDEwLjg2fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAxMSwgInNiX2xhYmVsIjogIk1hdGVyaWFsIFF1w61taWNvIiwgImphbiI6IDI5OTIyLjcsICJmZXYiOiAyNDg0MC43LCAibWFyIjogMzE4OTEuMjYsICJhYnIiOiAzMjU3My4yNn0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMTIsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBMYWJvcmF0b3JpYWwiLCAiamFuIjogMjA1NzAuMDUsICJmZXYiOiAyMDU3MC4wNSwgIm1hciI6IDIwNTcwLjA1LCAiYWJyIjogMjA1NzAuMDV9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDE0LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgRWR1Y2F0aXZvIGUgRXNwb3J0aXZvIiwgImphbiI6IDYyNzcxLjUsICJmZXYiOiA2Mjc3MS41LCAibWFyIjogNjI3NzEuNSwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMTUsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBwYXJhIEZlc3RpdmlkYWRlcyBlIEhvbWVuYWdlbnMiLCAiamFuIjogNDc3MjUuMTEsICJmZXYiOiA0NzcyNS4xMSwgIm1hciI6IDQ1NjkwLjc2LCAiYWJyIjogNDU2OTAuNzZ9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDE2LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgZGUgRXhwZWRpZW50ZSIsICJqYW4iOiAxODM5MDQzLjQxLCAiZmV2IjogMTg0MDgxNi4yMywgIm1hciI6IDE4NDA4MTYuMjMsICJhYnIiOiAxODQwODE2LjIzfSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAxNywgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgUHJvY2Vzc2FtZW50byBkZSBEYWRvcyIsICJqYW4iOiAxMTQ0MTcuMzcsICJmZXYiOiAxMTQ0MTcuMzcsICJtYXIiOiA2NjgwMDIuOTYsICJhYnIiOiA2NjgwMDIuOTZ9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDE5LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgZGUgQWNvbmRpY2lvbmFtZW50byBlIEVtYmFsYWdlbSIsICJqYW4iOiA3NDYxMTIuNzYsICJmZXYiOiA3NTQ3NTQuMTIsICJtYXIiOiA4OTAzNTcuMSwgImFiciI6IDExNTIyMjYuOH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMjAsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBkZSBDYW1hLCBNZXNhIGUgQmFuaG8iLCAiamFuIjogMTA2NzA3LjU3LCAiZmV2IjogMTA5MjQ5LjQ1LCAibWFyIjogMTA4ODc2LjMzLCAiYWJyIjogMTA4NjQzLjEzfSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAyMSwgInNiX2xhYmVsIjogIk1hdGVyaWFsIGRlIENvcGEgZSBDb3ppbmhhIiwgImphbiI6IDIxMjU4MDEuMjcsICJmZXYiOiAyMjEwNzAxLjYsICJtYXIiOiAyMzM2NTYwLjYxLCAiYWJyIjogMjQ5OTc0MC4yNH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMjIsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBkZSBMaW1wZXphIiwgImphbiI6IDI2MDg4NDkuNTgsICJmZXYiOiAyNDg1NzUyLjk5LCAibWFyIjogMjc4MDI5MC4xNiwgImFiciI6IDI4NDA0MDMuNjR9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDIzLCAic2JfbGFiZWwiOiAiVW5pZm9ybWVzLCBUZWNpZG9zIGUgQXZpYW1lbnRvcyIsICJqYW4iOiA1NDMxMjM4LjY0LCAiZmV2IjogNTMzNDk4My41NSwgIm1hciI6IDUzNjAwMjcuNDQsICJhYnIiOiA0ODU4ODgwLjI4fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAyNCwgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIEJlbnMgSW3Ds3ZlaXMiLCAiamFuIjogMzA2MjEyMy43NiwgImZldiI6IDMwNTI2OTEuNzUsICJtYXIiOiAzMjUwNTYyLjExLCAiYWJyIjogMzIzNzg3Ni40NX0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMjUsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBwYXJhIE1hbnV0ZW7Dp8OjbyBkZSBCZW5zIE3Ds3ZlaXMiLCAiamFuIjogMTU2MjA5NS42NywgImZldiI6IDE1NjIwOTUuNjcsICJtYXIiOiAxNjUwMzg3LjAxLCAiYWJyIjogMTY1MDM4Ny4wMX0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMjYsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBFbMOpdHJpY28gZSBFbGV0csO0bmljbyIsICJqYW4iOiA1NzMuOTEsICJmZXYiOiAxNTAzNzMyLjE3LCAibWFyIjogMTUwMzQ2Mi4xNywgImFiciI6IDE1MDMwOTYuODJ9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDI3LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgZGUgTWFub2JyYSBlIFBhdHJ1bGhhbWVudG8iLCAiamFuIjogMTUwOC42NSwgImZldiI6IDE1MDguNjUsICJtYXIiOiAxNTA4LjY1LCAiYWJyIjogMTUwOC42NX0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMjgsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBkZSBQcm90ZcOnw6NvIGUgU2VndXJhbsOnYSIsICJqYW4iOiAxMjUwMjg2LjMyLCAiZmV2IjogMTI1MDI4Ni4zMiwgIm1hciI6IDEyNTAyODYuMzIsICJhYnIiOiAxMjUwMjg2LjMyfSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAyOSwgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgw4F1ZGlvLCBWw61kZW8gZSBGb3RvIiwgImphbiI6IDQ4OTEuMTUsICJmZXYiOiA0ODkxLjE1LCAibWFyIjogNDg5MS4xNSwgImFiciI6IDQ4OTEuMTV9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDMwLCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgcGFyYSBDb211bmljYcOnw7VlcyIsICJqYW4iOiAxMzY4NS42NCwgImZldiI6IDEzNzczLjY0LCAibWFyIjogMjQ4NDYuMiwgImFiciI6IDI0ODQ2LjJ9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDMxLCAic2JfbGFiZWwiOiAiU2VtZW50ZXMgZSBJbnN1bW9zIEFncsOtY29sYXMiLCAiamFuIjogNzI5LjY4LCAiZmV2IjogMC4wLCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAzMiwgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIFZlw61jdWxvcyIsICJqYW4iOiA3NzcxMTE3LjI1LCAiZmV2IjogNzgzNjk1My4xMSwgIm1hciI6IDYyNTI1NTkuNDksICJhYnIiOiA2MjUyNTU5LjQ5fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAzMywgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIEVtYmFyY2HDp8O1ZXMiLCAiamFuIjogMTE4NjkzMS4yOCwgImZldiI6IDExODY2NTkuMjgsICJtYXIiOiAxMjY5NTE1Ljk4LCAiYWJyIjogMTI1ODc2My41Nn0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMzUsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBMYWJvcmF0b3JpYWwgZSBSZWFnZW50ZXMiLCAiamFuIjogMjc5NDYuMzIsICJmZXYiOiA4MzkuNDcsICJtYXIiOiAzODkyNS44NSwgImFiciI6IDMxODk2LjY3fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAzNiwgInNiX2xhYmVsIjogIk1hdGVyaWFsIEhvc3BpdGFsYXIiLCAiamFuIjogMTE5NzA4MzU5Ljc3LCAiZmV2IjogMTE5NzU4Nzg1LjQ5LCAibWFyIjogMTE5ODcwNTYxLjI0LCAiYWJyIjogMTE5ODU3OTQ1LjMzfSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiAzNywgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIEFlcm9uYXZlcyIsICJqYW4iOiAxOTM4NTAuMzIsICJmZXYiOiAxOTM4NTAuMzIsICJtYXIiOiAxOTM4NTAuMzIsICJhYnIiOiA5NjU3MDMuMzZ9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDM4LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgcGFyYSBNYW51dGVuw6fDo28gZGUgTcOhcXVpbmFzIGUgTW90b3JlcyIsICJqYW4iOiAyNzUzNzA3Ni4yNCwgImZldiI6IDI5MzAwOTkzLjMyLCAibWFyIjogMjY3Mjg4NzkuNzEsICJhYnIiOiAyNjYxNTQzNS4yN30sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogMzksICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBwYXJhIE1hbnV0ZW7Dp8OjbyBkZSBGZXJyYW1lbnRhcyIsICJqYW4iOiA3MDQuMTksICJmZXYiOiAwLjAsICJtYXIiOiAxMTAwODQ2Ljc1LCAiYWJyIjogMTEwMDg0Ni43NX0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogNDEsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBwYXJhIFV0aWxpemHDp8OjbyBlbSBDYW1wYW5oYSIsICJqYW4iOiAxMTUyMy4zMSwgImZldiI6IDExNTIzLjMxLCAibWFyIjogMTE1MjMuMzEsICJhYnIiOiAzNDMuMDd9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDQyLCAic2JfbGFiZWwiOiAiRmVycmFtZW50YXMiLCAiamFuIjogMTQ2ODQ3LjE4LCAiZmV2IjogMTQ3NDE1Ljg0LCAibWFyIjogMTQ3NDE1Ljg0LCAiYWJyIjogMTQ3NDE1Ljg0fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiA0MywgInNiX2xhYmVsIjogIk1hdGVyaWFsIGRlIFNpbmFsaXphw6fDo28gVmlzdWFsIiwgImphbiI6IDk3MTM0Ljk2LCAiZmV2IjogOTcxMzQuOTYsICJtYXIiOiA5NzEzNC45NiwgImFiciI6IDk3MTM0Ljk2fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiA0NCwgInNiX2xhYmVsIjogIk1hdGVyaWFsIGRlIFNpbmFsaXphw6fDo28iLCAiamFuIjogNzI5Mi41NiwgImZldiI6IDY4MjU1LjA0LCAibWFyIjogNjc5ODUuMDQsICJhYnIiOiA2NjkzNS4wNH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogNDUsICJzYl9sYWJlbCI6ICJDb21wb25lbnRlcyBkZSBSZXBvc2nDp8OjbyIsICJqYW4iOiA5NDAzNC45MSwgImZldiI6IDk0MDM0LjkxLCAibWFyIjogMTEwMzA3LjI1LCAiYWJyIjogMTEwMzA3LjI1fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiA1MCwgInNiX2xhYmVsIjogIkJhbmRlaXJhcywgRmzDom11bGFzIGUgSW5zw61nbmlhcyIsICJqYW4iOiAzMDIxMi45NSwgImZldiI6IDI5NTc4LjQ4LCAibWFyIjogMjkzNTMuNDgsICJhYnIiOiAyODk3NC42N30sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogNTQsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBkZSBQcm90ZcOnw6NvIGFvIFZvbyIsICJqYW4iOiAxMTUyLjAsICJmZXYiOiAxMTUyLjAsICJtYXIiOiAxMTUyLjAsICJhYnIiOiAwLjB9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDU4LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgZGUgRGVmZXNhIFF1w61taWNhLCBCaW9sw7NnaWNhLCBSYWRpb2zDs2dpY2EgZSBOdWNsZWFyIiwgImphbiI6IDExODY2NDMuODMsICJmZXYiOiAxMTg2NjQzLjgzLCAibWFyIjogMTE4NjY0My44MywgImFiciI6IDE0NC40Mn0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogNjMsICJzYl9sYWJlbCI6ICJNYXRlcmlhaXMgTcOpZGljb3MtSG9zcGl0YWxhcmVzIGRlIFVzbyDDmm5pY28iLCAiamFuIjogMTYxNjguMDgsICJmZXYiOiAxNjE2OC4wOCwgIm1hciI6IDE2MTY4LjA4LCAiYWJyIjogMTYxNjguMDh9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMS4wMCIsICJjb250YV9ub21lIjogIk1BVEVSSUFJUyBERSBDT05TVU1PIC0gSU5URVJOTyAoQWxtb3hhcmlmYWRvKSIsICJzYiI6IDc4LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgZGUgTWFudXRlbsOnw6NvIGRlIEVxdWlwYW1lbnRvcyBkZSBQcm90ZcOnw6NvIiwgImphbiI6IDg2Mzk5LjY3LCAiZmV2IjogODYzOTkuNjcsICJtYXIiOiA4NjM5OS42NywgImFiciI6IDg2Mzk5LjY3fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDEuMDAiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBSVMgREUgQ09OU1VNTyAtIElOVEVSTk8gKEFsbW94YXJpZmFkbykiLCAic2IiOiA4NCwgInNiX2xhYmVsIjogIk1hdGVyaWFsIGRlIENvbnN1bW8g4oCTIFByw7N0ZXNlcyBlIEltcGxhbnRlcyIsICJqYW4iOiA1MzQ5My4yNCwgImZldiI6IDUzNDkzLjI0LCAibWFyIjogNTM0OTMuMjQsICJhYnIiOiA1MzQ5My4yNH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAxLjAwIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUlTIERFIENPTlNVTU8gLSBJTlRFUk5PIChBbG1veGFyaWZhZG8pIiwgInNiIjogOTIsICJzYl9sYWJlbCI6ICJPdXRyb3MgTWF0ZXJpYWlzIGRlIENvbnN1bW8iLCAiamFuIjogOTM5LjksICJmZXYiOiA5MzkuOSwgIm1hciI6IDkzOS45LCAiYWJyIjogOTM5Ljl9LCB7ImNvbnRhIjogIjEuMS41LjYuMS4wMi4wMCIsICJjb250YV9ub21lIjogIkVTVE9RVUUgU09CUkVTU0FMRU5URVMgQSBBTElFTkFSIiwgInNiIjogMzgsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBwYXJhIE1hbnV0ZW7Dp8OjbyBkZSBNw6FxdWluYXMgZSBNb3RvcmVzIiwgImphbiI6IDE1MzE0NC40MSwgImZldiI6IDE1MzE0NC40MSwgIm1hciI6IDE1MzE0NC40MSwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjAzLjAwIiwgImNvbnRhX25vbWUiOiAiRVNUT1FVRSBTT0JSRVNTQUxFTlRFUyBFTSBSRVBBUk8iLCAic2IiOiAzOCwgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIE3DoXF1aW5hcyBlIE1vdG9yZXMiLCAiamFuIjogMzcwMjU4LjQ1LCAiZmV2IjogMzcwMjU4LjQ1LCAibWFyIjogMjE1NzI5LjU4LCAiYWJyIjogMjE1NzI5LjU4fSwgeyJjb250YSI6ICIxLjEuNS42LjEuMDQuMDAiLCAiY29udGFfbm9tZSI6ICJFU1RPUVVFIFNPQlJFU1NBTEVOVEVTIEEgUkVQQVJBUiIsICJzYiI6IDM3LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgcGFyYSBNYW51dGVuw6fDo28gZGUgQWVyb25hdmVzIiwgImphbiI6IDM4OTgyMi40NiwgImZldiI6IDM4OTgyMi40NiwgIm1hciI6IDM4OTgyMi40NiwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuNi4xLjA0LjAwIiwgImNvbnRhX25vbWUiOiAiRVNUT1FVRSBTT0JSRVNTQUxFTlRFUyBBIFJFUEFSQVIiLCAic2IiOiAzOCwgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIE3DoXF1aW5hcyBlIE1vdG9yZXMiLCAiamFuIjogMTE1ODgxMS4xNywgImZldiI6IDEzNjk3NzkuMCwgIm1hciI6IDExMzIwOTIuOTYsICJhYnIiOiAxMTMyMDkyLjk2fSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDExLCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgUXXDrW1pY28iLCAiamFuIjogOTc1OTQuOTIsICJmZXYiOiAyMDk5NS42MiwgIm1hciI6IDAuMCwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuOC4xLjAyLjAxIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUwgQ09OUyAtIEVTVE9RVUUgSU5URVJOTyBQQVJBIERJU1RSSUJVSVIiLCAic2IiOiAxNCwgInNiX2xhYmVsIjogIk1hdGVyaWFsIEVkdWNhdGl2byBlIEVzcG9ydGl2byIsICJqYW4iOiAwLjAsICJmZXYiOiAwLjAsICJtYXIiOiAwLjAsICJhYnIiOiAwLjB9LCB7ImNvbnRhIjogIjEuMS41LjguMS4wMi4wMSIsICJjb250YV9ub21lIjogIk1BVEVSSUFMIENPTlMgLSBFU1RPUVVFIElOVEVSTk8gUEFSQSBESVNUUklCVUlSIiwgInNiIjogMTcsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBwYXJhIFByb2Nlc3NhbWVudG8gZGUgRGFkb3MiLCAiamFuIjogNTUzNDgwLjg5LCAiZmV2IjogNTUzNDgwLjg5LCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDE5LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgZGUgQWNvbmRpY2lvbmFtZW50byBlIEVtYmFsYWdlbSIsICJqYW4iOiAwLjAsICJmZXYiOiAwLjAsICJtYXIiOiAwLjAsICJhYnIiOiAwLjB9LCB7ImNvbnRhIjogIjEuMS41LjguMS4wMi4wMSIsICJjb250YV9ub21lIjogIk1BVEVSSUFMIENPTlMgLSBFU1RPUVVFIElOVEVSTk8gUEFSQSBESVNUUklCVUlSIiwgInNiIjogMjEsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBkZSBDb3BhIGUgQ296aW5oYSIsICJqYW4iOiAwLjAsICJmZXYiOiAwLjAsICJtYXIiOiAwLjAsICJhYnIiOiAwLjB9LCB7ImNvbnRhIjogIjEuMS41LjguMS4wMi4wMSIsICJjb250YV9ub21lIjogIk1BVEVSSUFMIENPTlMgLSBFU1RPUVVFIElOVEVSTk8gUEFSQSBESVNUUklCVUlSIiwgInNiIjogMjIsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBkZSBMaW1wZXphIiwgImphbiI6IDQ2NTQ2Ljg3LCAiZmV2IjogNDY1NDYuODcsICJtYXIiOiAwLjAsICJhYnIiOiAwLjB9LCB7ImNvbnRhIjogIjEuMS41LjguMS4wMi4wMSIsICJjb250YV9ub21lIjogIk1BVEVSSUFMIENPTlMgLSBFU1RPUVVFIElOVEVSTk8gUEFSQSBESVNUUklCVUlSIiwgInNiIjogMjQsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBwYXJhIE1hbnV0ZW7Dp8OjbyBkZSBCZW5zIEltw7N2ZWlzIiwgImphbiI6IDE5MTcyMy41NywgImZldiI6IDE5MTcyMy41NywgIm1hciI6IDAuMCwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuOC4xLjAyLjAxIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUwgQ09OUyAtIEVTVE9RVUUgSU5URVJOTyBQQVJBIERJU1RSSUJVSVIiLCAic2IiOiAyNSwgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIEJlbnMgTcOzdmVpcyIsICJqYW4iOiA4ODI5MS4zNCwgImZldiI6IDg4MjkxLjM0LCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDI2LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgRWzDqXRyaWNvIGUgRWxldHLDtG5pY28iLCAiamFuIjogMC4wLCAiZmV2IjogMC4wLCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDI3LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgZGUgTWFub2JyYSBlIFBhdHJ1bGhhbWVudG8iLCAiamFuIjogMC4wLCAiZmV2IjogMC4wLCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDI4LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgZGUgUHJvdGXDp8OjbyBlIFNlZ3VyYW7Dp2EiLCAiamFuIjogMC4wLCAiZmV2IjogMC4wLCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDMwLCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgcGFyYSBDb211bmljYcOnw7VlcyIsICJqYW4iOiAxMTA3Mi41NiwgImZldiI6IDExMDcyLjU2LCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDMxLCAic2JfbGFiZWwiOiAiU2VtZW50ZXMgZSBJbnN1bW9zIEFncsOtY29sYXMiLCAiamFuIjogNDEzMS4wMywgImZldiI6IDAuMCwgIm1hciI6IDAuMCwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuOC4xLjAyLjAxIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUwgQ09OUyAtIEVTVE9RVUUgSU5URVJOTyBQQVJBIERJU1RSSUJVSVIiLCAic2IiOiAzMiwgInNiX2xhYmVsIjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIFZlw61jdWxvcyIsICJqYW4iOiAxNTU2MDU5LjE2LCAiZmV2IjogNDU5NDIuMzIsICJtYXIiOiAwLjAsICJhYnIiOiAwLjB9LCB7ImNvbnRhIjogIjEuMS41LjguMS4wMi4wMSIsICJjb250YV9ub21lIjogIk1BVEVSSUFMIENPTlMgLSBFU1RPUVVFIElOVEVSTk8gUEFSQSBESVNUUklCVUlSIiwgInNiIjogMzMsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBwYXJhIE1hbnV0ZW7Dp8OjbyBkZSBFbWJhcmNhw6fDtWVzIiwgImphbiI6IDgyNTM5LjMsICJmZXYiOiA4MjUzOS4zLCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDM0LCAic2JfbGFiZWwiOiAiU29icmVzc2FsZW50ZXMgZGUgTcOhcXVpbmFzIGUgRXF1aXBhbWVudG9zIiwgImphbiI6IDM2NTY4LjE2LCAiZmV2IjogMC4wLCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDM4LCAic2JfbGFiZWwiOiAiTWF0ZXJpYWwgcGFyYSBNYW51dGVuw6fDo28gZGUgTcOhcXVpbmFzIGUgTW90b3JlcyIsICJqYW4iOiAwLjAsICJmZXYiOiAwLjAsICJtYXIiOiAwLjAsICJhYnIiOiAwLjB9LCB7ImNvbnRhIjogIjEuMS41LjguMS4wMi4wMSIsICJjb250YV9ub21lIjogIk1BVEVSSUFMIENPTlMgLSBFU1RPUVVFIElOVEVSTk8gUEFSQSBESVNUUklCVUlSIiwgInNiIjogMzksICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBwYXJhIE1hbnV0ZW7Dp8OjbyBkZSBGZXJyYW1lbnRhcyIsICJqYW4iOiAxMTAyOTQ3LjU2LCAiZmV2IjogMTEwMDg0Ni43NSwgIm1hciI6IDAuMCwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuOC4xLjAyLjAxIiwgImNvbnRhX25vbWUiOiAiTUFURVJJQUwgQ09OUyAtIEVTVE9RVUUgSU5URVJOTyBQQVJBIERJU1RSSUJVSVIiLCAic2IiOiA0MiwgInNiX2xhYmVsIjogIkZlcnJhbWVudGFzIiwgImphbiI6IDM0ODkuMjMsICJmZXYiOiAwLjAsICJtYXIiOiAwLjAsICJhYnIiOiAwLjB9LCB7ImNvbnRhIjogIjEuMS41LjguMS4wMi4wMSIsICJjb250YV9ub21lIjogIk1BVEVSSUFMIENPTlMgLSBFU1RPUVVFIElOVEVSTk8gUEFSQSBESVNUUklCVUlSIiwgInNiIjogNDQsICJzYl9sYWJlbCI6ICJNYXRlcmlhbCBkZSBTaW5hbGl6YcOnw6NvIiwgImphbiI6IDY1MDI3LjQ4LCAiZmV2IjogMC4wLCAibWFyIjogMC4wLCAiYWJyIjogMC4wfSwgeyJjb250YSI6ICIxLjEuNS44LjEuMDIuMDEiLCAiY29udGFfbm9tZSI6ICJNQVRFUklBTCBDT05TIC0gRVNUT1FVRSBJTlRFUk5PIFBBUkEgRElTVFJJQlVJUiIsICJzYiI6IDQ1LCAic2JfbGFiZWwiOiAiQ29tcG9uZW50ZXMgZGUgUmVwb3Npw6fDo28iLCAiamFuIjogMjM0MDYuMjYsICJmZXYiOiAxNjI3Mi4zNCwgIm1hciI6IDAuMCwgImFiciI6IDAuMH0sIHsiY29udGEiOiAiMS4xLjUuOC4xLjA1LjAwIiwgImNvbnRhX25vbWUiOiAiSU1QT1JUQcOHw5VFUyBFTSBBTkRBTUVOVE8gLSBFU1RPUVVFUyIsICJzYiI6IG51bGwsICJzYl9sYWJlbCI6IG51bGwsICJqYW4iOiA0NjkwMjA3MS4xOCwgImZldiI6IDQ2OTAyMDcxLjE4LCAibWFyIjogNDY4NTg3OTguMDMsICJhYnIiOiA0Njg4MTQ5OC4xfV0sICJzYl9uYW1lcyI6IHsiMiI6ICJNYXRlcmlhbCBkZSBDb3ppbmhhIGUgTGltcGV6YSIsICIzIjogIkNvbWJ1c3TDrXZlaXMgZSBMdWJyaWZpY2FudGVzIHBhcmEgQXZpYcOnw6NvIiwgIjQiOiAiR8OhcyBFbmdhcnJhZmFkbyIsICI1IjogIkV4cGxvc2l2b3MgZSBNdW5pw6fDtWVzIiwgIjYiOiAiQWxpbWVudG9zIHBhcmEgQW5pbWFpcyIsICI3IjogIkfDqm5lcm9zIGRlIEFsaW1lbnRhw6fDo28iLCAiOSI6ICJNYXRlcmlhbCBGYXJtYWNvbMOzZ2ljbyIsICIxMCI6ICJNYXRlcmlhbCBPZG9udG9sw7NnaWNvIiwgIjExIjogIk1hdGVyaWFsIFF1w61taWNvIiwgIjEyIjogIk1hdGVyaWFsIExhYm9yYXRvcmlhbCIsICIxNCI6ICJNYXRlcmlhbCBFZHVjYXRpdm8gZSBFc3BvcnRpdm8iLCAiMTUiOiAiTWF0ZXJpYWwgcGFyYSBGZXN0aXZpZGFkZXMgZSBIb21lbmFnZW5zIiwgIjE2IjogIk1hdGVyaWFsIGRlIEV4cGVkaWVudGUiLCAiMTciOiAiTWF0ZXJpYWwgcGFyYSBQcm9jZXNzYW1lbnRvIGRlIERhZG9zIiwgIjE5IjogIk1hdGVyaWFsIGRlIEFjb25kaWNpb25hbWVudG8gZSBFbWJhbGFnZW0iLCAiMjAiOiAiTWF0ZXJpYWwgZGUgQ2FtYSwgTWVzYSBlIEJhbmhvIiwgIjIxIjogIk1hdGVyaWFsIGRlIENvcGEgZSBDb3ppbmhhIiwgIjIyIjogIk1hdGVyaWFsIGRlIExpbXBlemEiLCAiMjMiOiAiVW5pZm9ybWVzLCBUZWNpZG9zIGUgQXZpYW1lbnRvcyIsICIyNCI6ICJNYXRlcmlhbCBwYXJhIE1hbnV0ZW7Dp8OjbyBkZSBCZW5zIEltw7N2ZWlzIiwgIjI1IjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIEJlbnMgTcOzdmVpcyIsICIyNiI6ICJNYXRlcmlhbCBFbMOpdHJpY28gZSBFbGV0csO0bmljbyIsICIyNyI6ICJNYXRlcmlhbCBkZSBNYW5vYnJhIGUgUGF0cnVsaGFtZW50byIsICIyOCI6ICJNYXRlcmlhbCBkZSBQcm90ZcOnw6NvIGUgU2VndXJhbsOnYSIsICIyOSI6ICJNYXRlcmlhbCBwYXJhIMOBdWRpbywgVsOtZGVvIGUgRm90byIsICIzMCI6ICJNYXRlcmlhbCBwYXJhIENvbXVuaWNhw6fDtWVzIiwgIjMxIjogIlNlbWVudGVzIGUgSW5zdW1vcyBBZ3LDrWNvbGFzIiwgIjMyIjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIFZlw61jdWxvcyIsICIzMyI6ICJNYXRlcmlhbCBwYXJhIE1hbnV0ZW7Dp8OjbyBkZSBFbWJhcmNhw6fDtWVzIiwgIjM1IjogIk1hdGVyaWFsIExhYm9yYXRvcmlhbCBlIFJlYWdlbnRlcyIsICIzNiI6ICJNYXRlcmlhbCBIb3NwaXRhbGFyIiwgIjM3IjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIEFlcm9uYXZlcyIsICIzOCI6ICJNYXRlcmlhbCBwYXJhIE1hbnV0ZW7Dp8OjbyBkZSBNw6FxdWluYXMgZSBNb3RvcmVzIiwgIjM5IjogIk1hdGVyaWFsIHBhcmEgTWFudXRlbsOnw6NvIGRlIEZlcnJhbWVudGFzIiwgIjQxIjogIk1hdGVyaWFsIHBhcmEgVXRpbGl6YcOnw6NvIGVtIENhbXBhbmhhIiwgIjQyIjogIkZlcnJhbWVudGFzIiwgIjQzIjogIk1hdGVyaWFsIGRlIFNpbmFsaXphw6fDo28gVmlzdWFsIiwgIjQ0IjogIk1hdGVyaWFsIGRlIFNpbmFsaXphw6fDo28iLCAiNDUiOiAiQ29tcG9uZW50ZXMgZGUgUmVwb3Npw6fDo28iLCAiNTAiOiAiQmFuZGVpcmFzLCBGbMOibXVsYXMgZSBJbnPDrWduaWFzIiwgIjU0IjogIk1hdGVyaWFsIGRlIFByb3Rlw6fDo28gYW8gVm9vIiwgIjU4IjogIk1hdGVyaWFsIGRlIERlZmVzYSBRdcOtbWljYSwgQmlvbMOzZ2ljYSwgUmFkaW9sw7NnaWNhIGUgTnVjbGVhciIsICI2MyI6ICJNYXRlcmlhaXMgTcOpZGljb3MtSG9zcGl0YWxhcmVzIGRlIFVzbyDDmm5pY28iLCAiNzgiOiAiTWF0ZXJpYWwgZGUgTWFudXRlbsOnw6NvIGRlIEVxdWlwYW1lbnRvcyBkZSBQcm90ZcOnw6NvIiwgIjg0IjogIk1hdGVyaWFsIGRlIENvbnN1bW8g4oCTIFByw7N0ZXNlcyBlIEltcGxhbnRlcyIsICI5MiI6ICJPdXRyb3MgTWF0ZXJpYWlzIGRlIENvbnN1bW8iLCAiMzQiOiAiU29icmVzc2FsZW50ZXMgZGUgTcOhcXVpbmFzIGUgRXF1aXBhbWVudG9zIn0sICJtZXNlcyI6IFsiamFuIiwgImZldiIsICJtYXIiLCAiYWJyIl19";
+const RAW_BUNDLE = JSON.parse(decodeURIComponent(escape(atob(DADOS_B64))));
+const RAW_LINHAS = RAW_BUNDLE.linhas;
+const SB_NAMES = RAW_BUNDLE.sb_names;
+
+const ADMIN_PIN = "2026";
+const STORAGE_KEY = 'consumo-siafi-v2';
+const CRESCIMENTO_MIN_PCT = 10;
+const MIN_AUMENTOS = 2;  // ≥ 2 dos 3 saltos (4 meses = 3 saltos)
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function fmtBRL(v, d=2) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const s = v < 0 ? '-' : '';
+  return s + 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits:d, maximumFractionDigits:d });
+}
+function fmtBRLshort(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const a = Math.abs(v); const s = v < 0 ? '-' : '';
+  if (a >= 1e9) return s + 'R$ ' + (a/1e9).toFixed(2) + ' bi';
+  if (a >= 1e6) return s + 'R$ ' + (a/1e6).toFixed(2) + ' mi';
+  if (a >= 1e3) return s + 'R$ ' + (a/1e3).toFixed(1) + ' k';
+  return s + 'R$ ' + a.toFixed(2);
+}
+function fmtPct(v, d=2) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  if (!isFinite(v)) return 'NOVA';
+  return (v > 0 ? '+' : '') + v.toFixed(d).replace('.', ',') + '%';
+}
+function fmtSigned(v, d=2) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const s = v > 0 ? '+ ' : (v < 0 ? '− ' : '');
+  return s + 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits:d, maximumFractionDigits:d });
+}
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ============================================================
+   ENRICH (4 meses Jan-Fev-Mar-Abr)
+   ============================================================ */
+function enrichRow(r) {
+  const j = r.jan, f = r.fev, m = r.mar, a = r.abr;
+  const variacao = a - j;
+  let status = 'eq';
+  if (Math.abs(variacao) < 0.01) status = 'eq';
+  else if (variacao > 0) status = 'up';
+  else status = 'down';
+  const up_fev = f > j + 0.005;
+  const up_mar = m > f + 0.005;
+  const up_abr = a > m + 0.005;
+  const aumentos3m = (up_fev?1:0) + (up_mar?1:0) + (up_abr?1:0);
+  let pct_jan;
+  if (Math.abs(j) < 0.01) pct_jan = a > 0 ? Infinity : 0;
+  else pct_jan = ((a - j) / Math.abs(j)) * 100;
+  return { ...r, variacao, status, up_fev, up_mar, up_abr, aumentos3m, pct_jan };
+}
+
+function isCritica(d) {
+  return d.aumentos3m >= MIN_AUMENTOS && d.pct_jan > CRESCIMENTO_MIN_PCT;
+}
+
+/* ============================================================
+   ESTRUTURA HIERÁRQUICA
+   Agrupar linhas por conta para criar parent/child
+   ============================================================ */
+function buildHierarchy(linhas) {
+  const groups = {};
+  linhas.forEach(l => {
+    const enriched = enrichRow(l);
+    if (!groups[l.conta]) {
+      groups[l.conta] = {
+        conta: l.conta,
+        conta_nome: l.conta_nome,
+        children: [],
+        jan:0, fev:0, mar:0, abr:0,
+      };
+    }
+    groups[l.conta].children.push(enriched);
+    groups[l.conta].jan += l.jan;
+    groups[l.conta].fev += l.fev;
+    groups[l.conta].mar += l.mar;
+    groups[l.conta].abr += l.abr;
+  });
+  // Enriquecer pais com mesma lógica
+  return Object.values(groups).map(g => {
+    const enrichedParent = enrichRow({ ...g, jan:g.jan, fev:g.fev, mar:g.mar, abr:g.abr });
+    return { ...enrichedParent, children: g.children, conta_nome: g.conta_nome };
+  });
+}
+
+/* ============================================================
+   PERSISTÊNCIA
+   ============================================================ */
+function loadStored() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (Array.isArray(s.linhas) && s.linhas.length > 0) return s;
+  } catch(e) {}
+  return null;
+}
+function saveStored(linhas, meta) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ linhas, meta, savedAt:new Date().toISOString() })); return true; }
+  catch(e) { return false; }
+}
+function clearStored() { try { localStorage.removeItem(STORAGE_KEY); return true; } catch(e) { return false; } }
+
+const stored = loadStored();
+let CURRENT_LINHAS = stored ? stored.linhas : RAW_LINHAS;
+let CURRENT_META = stored ? stored.meta : { source:'embutido', savedAt:null };
+let HIERARCHY = buildHierarchy(CURRENT_LINHAS);
+let TOTALS = computeTotals();
+
+function computeTotals() {
+  return {
+    jan: HIERARCHY.reduce((s,h)=>s+h.jan, 0),
+    fev: HIERARCHY.reduce((s,h)=>s+h.fev, 0),
+    mar: HIERARCHY.reduce((s,h)=>s+h.mar, 0),
+    abr: HIERARCHY.reduce((s,h)=>s+h.abr, 0),
+  };
+}
+
+/* STATE */
+const state = {
+  unlocked:false, search:'',
+  expanded: new Set(),  // contas expandidas
+};
+
+/* ============================================================
+   KPIs
+   ============================================================ */
+function renderKPIs() {
+  const varAbs = TOTALS.abr - TOTALS.jan;
+  const varPct = TOTALS.jan !== 0 ? (varAbs / Math.abs(TOTALS.jan)) * 100 : 0;
+  document.getElementById('kpi-total').textContent = fmtBRLshort(TOTALS.abr);
+  document.getElementById('kpi-total-pill').textContent = (varPct > 0 ? '↑ ' : (varPct < 0 ? '↓ ' : '≈ ')) + fmtPct(varPct, 2);
+  document.getElementById('kpi-total-sub').textContent = 'vs ' + fmtBRLshort(TOTALS.jan) + ' em Jan';
+
+  // Maior subitem por |Abr|
+  const allSubs = HIERARCHY.flatMap(h => h.children.filter(c => c.sb !== null));
+  const top = [...allSubs].sort((a,b)=>Math.abs(b.abr) - Math.abs(a.abr))[0];
+  if (top) {
+    document.getElementById('kpi-top').textContent = fmtBRLshort(top.abr);
+    document.getElementById('kpi-top-conta').textContent = 'SB ' + top.sb + ' · ' + (top.sb_label || '').slice(0, 30);
+    const pctTotal = (Math.abs(top.abr) / Math.abs(TOTALS.abr)) * 100;
+    document.getElementById('kpi-top-pct').textContent = pctTotal.toFixed(1).replace('.',',') + '% do total';
+  }
+
+  // Maior crescimento (subitem com maior pct_jan finito e positivo)
+  const grow = [...allSubs]
+    .filter(c => isFinite(c.pct_jan) && c.jan !== 0 && Math.abs(c.abr) > 1000)
+    .sort((a,b) => b.pct_jan - a.pct_jan)[0];
+  if (grow) {
+    document.getElementById('kpi-grow').textContent = fmtPct(grow.pct_jan, 1);
+    document.getElementById('kpi-grow-name').textContent = 'SB ' + grow.sb + ' · ' + (grow.sb_label || '').slice(0, 30);
+  }
+
+  // Subitens críticos
+  const criticas = allSubs.filter(isCritica).length;
+  document.getElementById('kpi-criticas').textContent = criticas;
+
+  // Sidebar
+  document.getElementById('sb-abr').textContent = fmtBRLshort(TOTALS.abr);
+  document.getElementById('sb-pct').textContent = fmtPct(varPct);
+  document.getElementById('sb-crit-count').innerHTML =
+    '<span class="text-warning-500 font-semibold">' + criticas + '</span> <span class="text-ink-400">de ' + allSubs.length + '</span>';
+}
+
+/* ============================================================
+   CHARTS
+   ============================================================ */
+const apexFont = '"Open Sans", sans-serif';
+const apexMono = '"DM Mono", monospace';
+let chartTrend, chartDonut, chartOffenders;
+
+function safeMountChart(selector, opts, oldInstance) {
+  if (oldInstance) { try { oldInstance.destroy(); } catch(e) {} }
+  const el = document.querySelector(selector);
+  if (el) el.innerHTML = '';
+  const inst = new ApexCharts(el, opts);
+  inst.render();
+  return inst;
+}
+
+function buildTrend() {
+  const opts = {
+    chart: { type:'area', height:320, fontFamily:apexFont, toolbar:{show:false}, zoom:{enabled:false}, animations:{enabled:true, speed:600} },
+    series: [{ name:'Saldo SIAFI', data: [TOTALS.jan, TOTALS.fev, TOTALS.mar, TOTALS.abr] }],
+    colors: ['#1abc9c'],
+    stroke: { curve:'smooth', width:3 },
+    fill: { type:'gradient', gradient:{ shade:'light', type:'vertical', shadeIntensity:0.5, gradientToColors:['#34d399'], opacityFrom:0.55, opacityTo:0.05, stops:[0,100] } },
+    markers: { size:6, strokeWidth:3, strokeColors:'#fff', colors:['#1abc9c'], hover:{size:9} },
+    dataLabels: { enabled:false },
+    grid: { borderColor:'rgba(15,23,42,0.06)', strokeDashArray:3, xaxis:{lines:{show:false}}, padding:{left:12,right:12} },
+    xaxis: { categories:['Janeiro','Fevereiro','Março','Abril'], labels:{style:{colors:'#6c727b',fontSize:'11px',fontWeight:600,fontFamily:apexFont}}, axisBorder:{show:false}, axisTicks:{show:false} },
+    yaxis: { labels:{ style:{colors:'#9aa1ab',fontSize:'11px',fontFamily:apexMono}, formatter:v=>fmtBRLshort(v) } },
+    tooltip: { theme:'dark', shared:true, x:{ formatter:v=>v+' / 2026' }, y:{ formatter:v=>fmtBRL(v) } },
+    legend: { show:false },
+  };
+  chartTrend = safeMountChart('#chartTrend', opts, chartTrend);
+}
+
+function buildDonut() {
+  const sorted = [...HIERARCHY].sort((a,b)=>Math.abs(b.abr) - Math.abs(a.abr));
+  const labels = sorted.map(h => h.conta_nome.length>26 ? h.conta_nome.slice(0,26)+'…' : h.conta_nome);
+  const values = sorted.map(h => Math.abs(h.abr));
+  const opts = {
+    chart: { type:'donut', height:340, fontFamily:apexFont, animations:{enabled:true,speed:500} },
+    series: values, labels: labels,
+    colors: ['#15181c','#0c8a6f','#34d399','#dc2626','#3498db','#f39c12','#9aa1ab'],
+    stroke: { width:2, colors:['#fff'] },
+    plotOptions: { pie: { donut: { size:'70%', labels: {
+      show:true,
+      total: { show:true, showAlways:true, label:'TOTAL ABR', color:'#6c727b', fontSize:'10px', fontWeight:700, fontFamily:apexMono, formatter:()=>fmtBRLshort(values.reduce((s,v)=>s+v,0)) },
+      value: { show:true, fontSize:'15px', fontFamily:apexMono, fontWeight:700, color:'#15181c', formatter:v=>fmtBRLshort(parseFloat(v)) },
+      name:  { show:true, fontSize:'10px', color:'#6c727b', fontFamily:apexFont, fontWeight:600 }
+    } } } },
+    dataLabels: { enabled:false },
+    legend: { position:'bottom', fontSize:'10px', fontFamily:apexFont, fontWeight:500, labels:{colors:'#15181c'}, markers:{width:8,height:8,radius:2}, itemMargin:{horizontal:6,vertical:3} },
+    tooltip: { theme:'dark', y:{ formatter:v=>fmtBRL(v) } },
+  };
+  chartDonut = safeMountChart('#chartDonut', opts, chartDonut);
+}
+
+function buildOffenders() {
+  const allSubs = HIERARCHY.flatMap(h => h.children.filter(c => c.sb !== null));
+  const top10 = [...allSubs].sort((a,b)=>Math.abs(b.abr) - Math.abs(a.abr)).slice(0,10);
+  const labels = top10.map(t => 'SB ' + t.sb + ' · ' + (t.sb_label.length > 32 ? t.sb_label.slice(0,32)+'…' : t.sb_label));
+  const values = top10.map(t => t.abr);
+  const maxAbs = Math.max(...values.map(Math.abs));
+  const opts = {
+    chart: { type:'bar', height: Math.max(360, 42 * top10.length), fontFamily:apexFont, toolbar:{show:false}, animations:{enabled:true,speed:500} },
+    series: [{ name:'Saldo Abril', data:values }],
+    plotOptions: { bar: { horizontal:true, borderRadius:6, borderRadiusApplication:'end', barHeight:'62%', distributed:true, dataLabels:{position:'center'} } },
+    colors: values.map(v => v >= 0 ? '#3498db' : '#e74c3c'),
+    dataLabels: {
+      enabled:true,
+      formatter: function(v){ const r = Math.abs(v)/maxAbs; return r < 0.18 ? '' : fmtBRLshort(v); },
+      textAnchor:'middle', offsetX:0,
+      style: { fontSize:'11.5px', fontFamily:apexMono, fontWeight:700, colors:['#ffffff'] },
+      dropShadow: { enabled:true, left:0, top:1, blur:2, color:'#000', opacity:0.35 },
+    },
+    stroke: { width:0 },
+    grid: { borderColor:'rgba(15,23,42,0.06)', strokeDashArray:3, xaxis:{lines:{show:true}}, yaxis:{lines:{show:false}}, padding:{right:12,left:4,top:6,bottom:6} },
+    xaxis: { categories:labels, labels:{ style:{colors:'#9aa1ab',fontSize:'10px',fontFamily:apexMono}, formatter:v=>fmtBRLshort(v) }, axisBorder:{show:false}, axisTicks:{show:false} },
+    yaxis: { labels:{ maxWidth:280, style:{colors:'#34495e',fontSize:'11.5px',fontWeight:500,fontFamily:apexFont} } },
+    legend: { show:false },
+    tooltip: {
+      theme:'dark', shared:false, intersect:true,
+      custom: ({ dataPointIndex }) => {
+        const d = top10[dataPointIndex];
+        return '<div style="padding:10px 12px;font-family:Open Sans">' +
+          '<div style="font-family:Roboto;font-weight:700;font-size:13.5px;color:#6ee7b7;margin-bottom:2px">SB ' + d.sb + ' · ' + d.sb_label + '</div>' +
+          '<div style="font-size:10.5px;color:#9aa1ab;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:DM Mono">' + d.conta + ' · ' + d.conta_nome + '</div>' +
+          '<div style="font-family:DM Mono;font-size:13px;font-weight:600;color:#34d399">' + fmtBRL(d.abr) + '</div>' +
+          '<div style="font-size:11px;color:#c0c6cd;margin-top:4px">Δ% vs Jan: ' + fmtPct(d.pct_jan) + '</div>' +
+        '</div>';
+      }
+    }
+  };
+  chartOffenders = safeMountChart('#chartOffenders', opts, chartOffenders);
+}
+
+/* ============================================================
+   TABELA HIERÁRQUICA
+   ============================================================ */
+function rowMatchesSearch(d) {
+  if (!state.search) return true;
+  const q = state.search.toLowerCase();
+  return (d.conta || '').toLowerCase().includes(q)
+      || (d.conta_nome || '').toLowerCase().includes(q)
+      || (d.sb_label || '').toLowerCase().includes(q)
+      || ('sb ' + (d.sb || '')).toLowerCase().includes(q);
+}
+
+function cellMonth(d, key, prevKey, label, prevLabel) {
+  const v = d[key];
+  const cls = v < 0 ? 'text-danger-600' : (v > 0 ? 'text-ink-900' : 'text-ink-400');
+  const prevVal = prevKey ? d[prevKey] : null;
+  const deltaPrev = prevVal !== null ? (v - prevVal) : null;
+  const deltaJan  = v - d.jan;
+  const payload = { mes: label, valor: v, prevLabel, prevVal, deltaPrev, deltaJan, descricao: d.sb_label || d.conta_nome, conta: d.conta + (d.sb!==undefined && d.sb!==null ? ' · SB '+d.sb : ''), isFirstMonth: !prevKey };
+  const tipAttr = encodeURIComponent(JSON.stringify(payload));
+  return '<td class="num font-mono px-4 py-3 text-right has-tip ' + cls + '" data-tip="' + tipAttr + '">' + fmtBRL(v) + '</td>';
+}
+
+function cellPattern(d) {
+  const isAlert = d.aumentos3m >= MIN_AUMENTOS;
+  const cls = 'trend-pat' + (isAlert ? ' alert' : '');
+  const tit = 'Jan→Fev: ' + (d.up_fev?'subiu':'não subiu') +
+              ' | Fev→Mar: ' + (d.up_mar?'subiu':'não subiu') +
+              ' | Mar→Abr: ' + (d.up_abr?'subiu':'não subiu') +
+              ' (' + d.aumentos3m + '/3)';
+  return '<td class="px-4 py-3 text-center"><span class="' + cls + '" title="' + tit + '">' +
+    (d.up_fev ? '<span class="up">▲</span>' : '<span class="flat">·</span>') +
+    (d.up_mar ? '<span class="up">▲</span>' : '<span class="flat">·</span>') +
+    (d.up_abr ? '<span class="up">▲</span>' : '<span class="flat">·</span>') +
+    '</span></td>';
+}
+function cellPctJan(d) {
+  let cls = 'text-ink-400', txt;
+  if (d.pct_jan === Infinity) { cls = 'text-danger-600 font-semibold'; txt = 'NOVA'; }
+  else if (Math.abs(d.pct_jan) < 0.05) { cls = 'text-ink-400'; txt = '0,0%'; }
+  else {
+    const v = d.pct_jan;
+    if (v > 10) cls = 'text-danger-600 font-semibold';
+    else if (v > 0) cls = 'text-warning-600 font-semibold';
+    else cls = 'text-accent-700 font-semibold';
+    txt = (v > 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + '%';
+  }
+  return '<td class="num font-mono px-4 py-3 text-right ' + cls + '">' + txt + '</td>';
+}
+function statusBadge(d) {
+  let badge = '';
+  if (d.status === 'up') badge = '<span class="pill pill-up">↑ Cresceu</span>';
+  else if (d.status === 'down') badge = '<span class="pill pill-down">↓ Reduziu</span>';
+  else badge = '<span class="pill pill-eq">≈ Estável</span>';
+  if (isCritica(d)) badge += ' <span class="pill pill-crit">⚠</span>';
+  return badge;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  let renderedCount = 0;
+
+  HIERARCHY.forEach(parent => {
+    // Filtra subitens segundo busca
+    const matchingChildren = parent.children.filter(c => rowMatchesSearch(c));
+    const parentMatches = rowMatchesSearch(parent);
+    if (matchingChildren.length === 0 && !parentMatches) return;
+
+    // Linha pai
+    const isExp = state.expanded.has(parent.conta);
+    const arrow = '<span class="toggle-arrow ' + (isExp ? 'expanded' : '') + '" data-conta="' + parent.conta + '">▶</span>';
+    const trP = document.createElement('tr');
+    trP.className = 'parent-row border-b border-ink-200/40';
+    trP.innerHTML =
+      '<td class="px-4 py-3"><div class="flex items-center gap-2">' + arrow +
+        '<div class="flex flex-col"><span class="font-mono text-[11.5px] text-accent-700 font-semibold">' + parent.conta + '</span>' +
+        '<span class="text-[12px] text-ink-900 font-semibold">' + parent.conta_nome + '</span>' +
+        '<span class="text-[10px] text-ink-500 font-mono">' + parent.children.length + ' subitens</span></div>' +
+      '</div></td>' +
+      cellMonth(parent, 'jan', null, 'Janeiro', null) +
+      cellMonth(parent, 'fev', 'jan', 'Fevereiro', 'Janeiro') +
+      cellMonth(parent, 'mar', 'fev', 'Março', 'Fevereiro') +
+      cellMonth(parent, 'abr', 'mar', 'Abril', 'Março') +
+      cellPattern(parent) + cellPctJan(parent) +
+      '<td class="px-4 py-3">' + statusBadge(parent) + '</td>';
+    tbody.appendChild(trP);
+    renderedCount++;
+
+    // Filhos (se expandido)
+    if (isExp) {
+      // Ordena filhos por |abr| desc
+      const sortedChildren = [...matchingChildren].sort((a,b) => Math.abs(b.abr) - Math.abs(a.abr));
+      sortedChildren.forEach(child => {
+        const trC = document.createElement('tr');
+        const isRancho = child.sb === 7;
+        trC.className = 'child-row border-b border-ink-200/40' + (isRancho ? ' sb-rancho' : '');
+        const sbTag = child.sb !== null
+          ? '<span class="sb-tag">SB ' + child.sb + '</span>'
+          : '<span class="sb-tag" style="background:#f3f4f6">—</span>';
+        const label = child.sb_label || (child.sb === null ? 'Sem detalhamento' : 'SB ' + child.sb);
+        trC.innerHTML =
+          '<td class="px-4 py-3 descricao">' + sbTag + label + '</td>' +
+          cellMonth(child, 'jan', null, 'Janeiro', null) +
+          cellMonth(child, 'fev', 'jan', 'Fevereiro', 'Janeiro') +
+          cellMonth(child, 'mar', 'fev', 'Março', 'Fevereiro') +
+          cellMonth(child, 'abr', 'mar', 'Abril', 'Março') +
+          cellPattern(child) + cellPctJan(child) +
+          '<td class="px-4 py-3">' + statusBadge(child) + '</td>';
+        tbody.appendChild(trC);
+        renderedCount++;
+      });
+    }
+  });
+
+  document.getElementById('emptyState').classList.toggle('hidden', renderedCount > 0);
+
+  // Bind toggles
+  tbody.querySelectorAll('.toggle-arrow').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const conta = el.dataset.conta;
+      if (state.expanded.has(conta)) state.expanded.delete(conta);
+      else state.expanded.add(conta);
+      renderTable();
+    };
+  });
+  // Click na linha pai inteira também alterna (UX)
+  tbody.querySelectorAll('tr.parent-row').forEach(tr => {
+    tr.addEventListener('click', e => {
+      if (e.target.closest('.has-tip')) return;
+      const arr = tr.querySelector('.toggle-arrow');
+      if (arr) arr.click();
+    });
+  });
+}
+
+/* ============================================================
+   TOOLTIP CÉLULA
+   ============================================================ */
+function dirClass(v) {
+  if (v === null || v === undefined || isNaN(v) || Math.abs(v) < 0.01) return 'eq';
+  return v > 0 ? 'pos' : 'neg';
+}
+function showCellTip(td) {
+  const raw = td.getAttribute('data-tip');
+  if (!raw) return;
+  let p; try { p = JSON.parse(decodeURIComponent(raw)); } catch(e) { return; }
+  const tip = document.getElementById('cellTooltip');
+  let html = '<div class="ttitle">' + p.mes + '</div><div class="tsub">' + (p.descricao||'').slice(0,40) + '</div>' +
+             '<div class="trow"><span class="lbl">Saldo do mês</span><span class="val ' + (p.valor < 0 ? 'neg' : 'eq') + '">' + fmtBRL(p.valor) + '</span></div>';
+  if (p.isFirstMonth) {
+    html += '<div class="tflag">Mês inicial — sem comparação anterior</div>';
+  } else {
+    html += '<div class="tdiv"></div>' +
+            '<div class="tsub" style="color:#6ee7b7;margin-bottom:6px">vs ' + p.prevLabel + '</div>' +
+            '<div class="trow"><span class="lbl">Δ Nominal</span><span class="val ' + dirClass(p.deltaPrev) + '">' + fmtSigned(p.deltaPrev) + '</span></div>';
+    if (p.prevLabel !== 'Janeiro') {
+      html += '<div class="tdiv"></div>' +
+              '<div class="tsub" style="color:#fbbf24;margin-bottom:6px">vs Início do Ano</div>' +
+              '<div class="trow"><span class="lbl">Δ Nominal acumulado</span><span class="val ' + dirClass(p.deltaJan) + '">' + fmtSigned(p.deltaJan) + '</span></div>';
+    }
+    if (p.deltaPrev > 0.01) html += '<div class="tflag warn">↑ Cresceu vs ' + p.prevLabel + '</div>';
+    else if (p.deltaPrev < -0.01) html += '<div class="tflag">↓ Reduziu vs ' + p.prevLabel + '</div>';
+    else html += '<div class="tflag" style="color:#9aa1ab">≈ Estável</div>';
+  }
+  tip.innerHTML = html;
+  tip.classList.add('show');
+  const rect = td.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  let top = rect.top - tipRect.height - 10;
+  let left = rect.left + (rect.width/2) - (tipRect.width/2);
+  if (top < 8) top = rect.bottom + 10;
+  const maxLeft = window.innerWidth - tipRect.width - 12;
+  if (left < 12) left = 12;
+  if (left > maxLeft) left = maxLeft;
+  tip.style.top = top + 'px';
+  tip.style.left = left + 'px';
+}
+function hideCellTip() { document.getElementById('cellTooltip').classList.remove('show'); }
+
+/* PAINEL CRITÉRIO */
+function toggleCritRule(anchor) {
+  const box = document.getElementById('critRuleBox');
+  if (box.classList.contains('show')) { box.classList.remove('show'); return; }
+  const r = anchor.getBoundingClientRect();
+  box.classList.add('show');
+  let top = r.bottom + 10;
+  let left = r.left;
+  if (left + 380 > window.innerWidth - 16) left = window.innerWidth - 380 - 16;
+  if (left < 16) left = 16;
+  box.style.top = top + 'px';
+  box.style.left = left + 'px';
+}
+function hideCritRule() { document.getElementById('critRuleBox').classList.remove('show'); }
+
+/* REBUILD GERAL */
+function rebuildAll() {
+  HIERARCHY = buildHierarchy(CURRENT_LINHAS);
+  TOTALS = computeTotals();
+  renderKPIs();
+  buildTrend();
+  buildDonut();
+  buildOffenders();
+  renderTable();
+}
+
+/* ============================================================
+   IMPORT (parser para a nova estrutura SIAFI por subitem)
+   ============================================================ */
+function parseExcelData(arrayBuffer) {
+  const wb = XLSX.read(arrayBuffer, { type:'array', cellDates:false });
+  const sheetName = wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const aoa = XLSX.utils.sheet_to_json(ws, { header:1, defval:null, raw:true });
+  if (aoa.length < 5) throw new Error('Planilha vazia ou poucas linhas.');
+
+  function norm(s) { if (s==null) return ''; return String(s).toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+  function num(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    if (typeof v === 'number') return v;
+    const s = String(v).replace(/\./g,'').replace(',','.').replace(/[^\d.\-]/g,'');
+    const n = parseFloat(s); return isNaN(n) ? 0 : n;
+  }
+
+  // Linha 3 (índice 2): cabeçalho com "Conta Contábil", "Conta Corrente", meses
+  const header = aoa[2] || [];
+  const colMes = {};
+  for (let c = 0; c < header.length; c++) {
+    const h = norm(header[c]);
+    if (/jan/.test(h)) colMes.jan = c;
+    else if (/fev/.test(h)) colMes.fev = c;
+    else if (/mar/.test(h)) colMes.mar = c;
+    else if (/abr/.test(h)) colMes.abr = c;
+  }
+  const faltam = ['jan','fev','mar','abr'].filter(m => colMes[m] === undefined);
+  if (faltam.length > 0) throw new Error('Meses não identificados: ' + faltam.join(', '));
+
+  // Mapeamento de códigos
+  const CODE_MAP = {
+    '115511000': ['1.1.5.5.1.10.00', 'MATERIAIS DE CONSUMO EM TRÂNSITO'],
+    '115610100': ['1.1.5.6.1.01.00', 'MATERIAIS DE CONSUMO - INTERNO (Almoxarifado)'],
+    '115610200': ['1.1.5.6.1.02.00', 'ESTOQUE SOBRESSALENTES A ALIENAR'],
+    '115610300': ['1.1.5.6.1.03.00', 'ESTOQUE SOBRESSALENTES EM REPARO'],
+    '115610400': ['1.1.5.6.1.04.00', 'ESTOQUE SOBRESSALENTES A REPARAR'],
+    '115810201': ['1.1.5.8.1.02.01', 'MATERIAL CONS - ESTOQUE INTERNO PARA DISTRIBUIR'],
+    '115810500': ['1.1.5.8.1.05.00', 'IMPORTAÇÕES EM ANDAMENTO - ESTOQUES'],
+  };
+
+  const dados = [];
+  for (let i = 4; i < aoa.length; i++) {
+    const r = aoa[i]; if (!r) continue;
+    const code = r[0]; if (!code) continue;
+    const codeStr = String(code).trim();
+    if (codeStr.toLowerCase() === 'total') continue;
+    if (!CODE_MAP[codeStr]) continue;
+
+    const sbRaw = r[2];
+    let sb = null;
+    if (sbRaw !== null && sbRaw !== undefined && String(sbRaw).trim().toUpperCase() !== 'SEM INFORMACAO') {
+      const parsed = parseInt(String(sbRaw).trim());
+      if (!isNaN(parsed)) sb = parsed;
+    }
+    const [conta_code, conta_nome] = CODE_MAP[codeStr];
+    const sb_label = sb !== null ? (SB_NAMES[sb] || SB_NAMES[String(sb)] || ('SB ' + sb)) : null;
+    dados.push({
+      conta: conta_code, conta_nome, sb, sb_label,
+      jan: num(r[colMes.jan]),
+      fev: num(r[colMes.fev]),
+      mar: num(r[colMes.mar]),
+      abr: num(r[colMes.abr]),
+    });
+  }
+  if (dados.length === 0) throw new Error('Nenhum registro válido encontrado.');
+  return { data: dados, sheetName, rowsRead: dados.length };
+}
+
+let pendingImport = null;
+function openImportModal() {
+  if (!state.unlocked) { showToast('⚠ Acesso restrito · ative Admin', 'error'); return; }
+  document.getElementById('modalImport').classList.remove('hidden');
+  document.getElementById('modalImport').classList.add('flex');
+  resetImportModal();
+}
+function closeImportModal() {
+  document.getElementById('modalImport').classList.add('hidden');
+  document.getElementById('modalImport').classList.remove('flex');
+  resetImportModal();
+}
+function resetImportModal() {
+  pendingImport = null;
+  document.getElementById('importStatus').classList.add('hidden');
+  document.getElementById('importError').classList.add('hidden');
+  document.getElementById('importPreview').textContent = '';
+  document.getElementById('fileInput').value = '';
+  const apply = document.getElementById('importApply');
+  apply.disabled = true; apply.style.opacity='0.5'; apply.style.cursor='not-allowed';
+}
+function showImportError(msg) {
+  const el = document.getElementById('importError');
+  el.textContent = '⚠ ' + msg;
+  el.classList.remove('hidden');
+  document.getElementById('importStatus').classList.add('hidden');
+}
+function handleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) { showImportError('Formato não suportado: .' + ext); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const r = parseExcelData(e.target.result);
+      pendingImport = { ...r, fileName:file.name, fileSize:file.size };
+      const status = document.getElementById('importStatus');
+      status.classList.remove('hidden');
+      document.getElementById('importError').classList.add('hidden');
+      document.getElementById('importFileName').textContent = file.name;
+      document.getElementById('importFileSize').textContent = (file.size/1024).toFixed(1) + ' KB';
+      const subItems = r.data.filter(x => x.sb !== null).length;
+      const preview = '<span class="text-accent-700 font-semibold">✓ ' + r.data.length + ' linhas</span> · ' + subItems + ' subitens detalhados';
+      document.getElementById('importPreview').innerHTML = preview;
+      const apply = document.getElementById('importApply');
+      apply.disabled = false; apply.style.opacity='1'; apply.style.cursor='pointer';
+    } catch (err) { console.error(err); showImportError(err.message); pendingImport = null; }
+  };
+  reader.onerror = () => showImportError('Falha ao ler arquivo.');
+  reader.readAsArrayBuffer(file);
+}
+function applyImport() {
+  if (!pendingImport) return;
+  CURRENT_LINHAS = pendingImport.data;
+  CURRENT_META = { source:'upload', fileName:pendingImport.fileName, savedAt:new Date().toISOString() };
+  saveStored(CURRENT_LINHAS, CURRENT_META);
+  rebuildAll();
+  refreshDataSourceUI();
+  closeImportModal();
+  showToast('✓ Planilha aplicada · ' + CURRENT_LINHAS.length + ' linhas');
+  updateRestoreButton();
+}
+function restoreOriginal() {
+  if (!confirm('Restaurar planilha original?')) return;
+  clearStored();
+  CURRENT_LINHAS = RAW_LINHAS;
+  CURRENT_META = { source:'embutido', savedAt:null };
+  rebuildAll();
+  refreshDataSourceUI();
+  showToast('✓ Planilha original restaurada');
+  updateRestoreButton();
+}
+function updateRestoreButton() {
+  const btn = document.getElementById('btnRestore');
+  if (state.unlocked && CURRENT_META.source === 'upload') btn.classList.remove('hidden');
+  else btn.classList.add('hidden');
+}
+
+/* PIN */
+function openLockModal() {
+  if (state.unlocked) {
+    state.unlocked = false;
+    const ls = document.getElementById('lockStatus');
+    ls.textContent = '🔒'; ls.style.background='rgba(220,38,38,0.15)'; ls.style.color='#fca5a5';
+    document.getElementById('btnLock').textContent = 'Admin';
+    document.getElementById('btnImport').classList.add('hidden');
+    document.getElementById('btnRestore').classList.add('hidden');
+    showToast('Modo administrador desativado');
+    return;
+  }
+  document.getElementById('modalLock').classList.remove('hidden');
+  document.getElementById('modalLock').classList.add('flex');
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinError').textContent = '';
+  setTimeout(()=>document.getElementById('pinInput').focus(), 100);
+}
+function closeLockModal() {
+  document.getElementById('modalLock').classList.add('hidden');
+  document.getElementById('modalLock').classList.remove('flex');
+}
+function confirmPin() {
+  const v = document.getElementById('pinInput').value.trim();
+  if (v === ADMIN_PIN) {
+    state.unlocked = true;
+    const ls = document.getElementById('lockStatus');
+    ls.textContent = '🔓'; ls.style.background='rgba(16,185,129,0.18)'; ls.style.color='#6ee7b7';
+    document.getElementById('btnLock').textContent = 'Sair Admin';
+    document.getElementById('btnImport').classList.remove('hidden');
+    updateRestoreButton();
+    closeLockModal();
+    showToast('✓ Modo administrador ativado');
+  } else {
+    document.getElementById('pinError').textContent = 'PIN incorreto.';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+
+/* EXPORT/COPY */
+function exportHTML() {
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const blob = new Blob([html], { type:'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dashboard-saldos-siafi-consumo.html';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  showToast('✓ HTML exportado');
+}
+async function copyHTML() {
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  try { await navigator.clipboard.writeText(html); showToast('✓ HTML copiado'); }
+  catch(e) {
+    const ta = document.createElement('textarea');
+    ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('✓ HTML copiado');
+  }
+}
+
+function refreshDataSourceUI() {
+  const badge = document.getElementById('dataSourceBadge');
+  const stamp = document.getElementById('genStamp');
+  if (CURRENT_META.source === 'upload') {
+    badge.classList.remove('hidden');
+    badge.title = 'Origem: ' + (CURRENT_META.fileName || 'arquivo');
+    if (CURRENT_META.savedAt) {
+      const dt = new Date(CURRENT_META.savedAt);
+      stamp.textContent = dt.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    }
+  } else {
+    badge.classList.add('hidden');
+    stamp.textContent = new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+}
+
+/* EVENTS */
+function bindEvents() {
+  document.getElementById('tableSearch').addEventListener('input', e => {
+    state.search = e.target.value;
+    if (state.search.length > 0) {
+      // Auto-expandir contas que têm match nos filhos
+      HIERARCHY.forEach(p => {
+        const hasChildMatch = p.children.some(c => rowMatchesSearch(c));
+        if (hasChildMatch) state.expanded.add(p.conta);
+      });
+    }
+    renderTable();
+  });
+  document.getElementById('globalSearch').addEventListener('input', e => {
+    state.search = e.target.value;
+    document.getElementById('tableSearch').value = e.target.value;
+    if (state.search.length > 0) {
+      HIERARCHY.forEach(p => {
+        const hasChildMatch = p.children.some(c => rowMatchesSearch(c));
+        if (hasChildMatch) state.expanded.add(p.conta);
+      });
+    }
+    renderTable();
+  });
+  document.getElementById('btnExpandAll').onclick = () => {
+    HIERARCHY.forEach(p => state.expanded.add(p.conta));
+    renderTable();
+  };
+  document.getElementById('btnCollapseAll').onclick = () => {
+    state.expanded.clear();
+    renderTable();
+  };
+  document.getElementById('btnLock').onclick = openLockModal;
+  document.getElementById('modalClose').onclick = closeLockModal;
+  document.getElementById('modalCancel').onclick = closeLockModal;
+  document.getElementById('modalConfirm').onclick = confirmPin;
+  document.getElementById('pinInput').addEventListener('keypress', e => { if (e.key === 'Enter') confirmPin(); });
+  document.getElementById('btnExport').onclick = exportHTML;
+  document.getElementById('btnCopy').onclick = copyHTML;
+  document.getElementById('btnImport').onclick = openImportModal;
+  document.getElementById('btnRestore').onclick = restoreOriginal;
+  document.getElementById('importClose').onclick = closeImportModal;
+  document.getElementById('importCancel').onclick = closeImportModal;
+  document.getElementById('importApply').onclick = applyImport;
+
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  dropZone.onclick = () => fileInput.click();
+  fileInput.addEventListener('change', e => { if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]); });
+  ['dragenter','dragover'].forEach(ev => { dropZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('border-accent-500','bg-accent-50/60'); }); });
+  ['dragleave','drop'].forEach(ev => { dropZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('border-accent-500','bg-accent-50/60'); }); });
+  dropZone.addEventListener('drop', e => { if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (!document.getElementById('modalImport').classList.contains('hidden')) closeImportModal();
+      if (!document.getElementById('modalLock').classList.contains('hidden')) closeLockModal();
+    }
+  });
+
+  document.querySelectorAll('.nav-link').forEach(a => {
+    a.onclick = (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
+      a.classList.add('active');
+      const t = document.querySelector(a.getAttribute('href'));
+      if (t) t.scrollIntoView({ behavior:'smooth', block:'start' });
+    };
+  });
+
+  // Tooltip de células
+  const tbody = document.getElementById('tableBody');
+  tbody.addEventListener('mouseover', e => { const td = e.target.closest('td.has-tip'); if (td) showCellTip(td); });
+  tbody.addEventListener('mouseout',  e => { const td = e.target.closest('td.has-tip'); if (td && !td.contains(e.relatedTarget)) hideCellTip(); });
+  window.addEventListener('scroll', () => { hideCellTip(); hideCritRule(); }, true);
+
+  // Painel critério
+  const infoIco = document.getElementById('kpi-criticas-info');
+  const critCard = document.getElementById('kpi-criticas-card');
+  const legendCrit = document.getElementById('legendCrit');
+  if (infoIco) infoIco.onclick = e => { e.stopPropagation(); toggleCritRule(infoIco); };
+  if (legendCrit) legendCrit.onclick = e => { e.stopPropagation(); toggleCritRule(legendCrit); };
+  if (critCard) {
+    critCard.addEventListener('mouseenter', () => { if (!document.getElementById('critRuleBox').classList.contains('show')) toggleCritRule(critCard); });
+    critCard.addEventListener('mouseleave', hideCritRule);
+  }
+  document.addEventListener('click', e => {
+    const box = document.getElementById('critRuleBox');
+    if (!box.contains(e.target) && e.target !== infoIco && e.target !== legendCrit) hideCritRule();
+  });
+}
+
+/* INIT */
+function init() {
+  if (window.__dashboardInitialized) return;
+  window.__dashboardInitialized = true;
+  refreshDataSourceUI();
+  renderKPIs();
+  buildTrend();
+  buildDonut();
+  buildOffenders();
+  // Expandir conta INTERNO por padrão (a maior, com mais subitens — incluindo o SB7)
+  state.expanded.add('1.1.5.6.1.01.00');
+  renderTable();
+  bindEvents();
+}
+function bootstrap() {
+  if (typeof ApexCharts === 'undefined') return setTimeout(bootstrap, 50);
+  init();
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrap, { once:true });
+} else { bootstrap(); }
+</script>
+</body>
+</html>
